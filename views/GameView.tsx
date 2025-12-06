@@ -5,7 +5,7 @@ import { AbacusVisual } from '../components/AbacusVisual';
 import { generateProblem } from '../services/mathService';
 import { saveGameData, updateDailyRecord, getTodayRecord } from '../services/storageService';
 import { DIFFICULTY_REWARDS } from '../constants';
-import { ArrowLeft, CheckCircle2, XCircle, Calculator, Star, PartyPopper } from 'lucide-react';
+import { ArrowLeft, XCircle, Calculator } from 'lucide-react';
 
 interface GameViewProps {
   changeView: (view: ViewState) => void;
@@ -13,31 +13,101 @@ interface GameViewProps {
   setGameData: React.Dispatch<React.SetStateAction<GameData>>;
 }
 
+type CelebrationType = 'confetti' | 'candy-rain' | 'rocket' | 'magic';
+
 // Sub-component for Celebration Overlay
-const CelebrationOverlay: React.FC<{ show: boolean; rewardAmount: number }> = ({ show, rewardAmount }) => {
+const CelebrationOverlay: React.FC<{ show: boolean; rewardAmount: number; type: CelebrationType }> = ({ show, rewardAmount, type }) => {
   if (!show) return null;
+
+  const renderContent = () => {
+    switch (type) {
+      case 'candy-rain':
+        return (
+          <>
+            {/* Falling Candies */}
+            {[...Array(15)].map((_, i) => (
+              <div 
+                key={i}
+                className={`absolute text-4xl ${i % 2 === 0 ? 'animate-fall-slow' : 'animate-fall-fast'}`}
+                style={{ 
+                  left: `${Math.random() * 100}%`, 
+                  top: `-${Math.random() * 20}%`,
+                  animationDelay: `${Math.random() * 1}s` 
+                }}
+              >
+                🍬
+              </div>
+            ))}
+            <div className="relative z-10 flex flex-col items-center animate-pop-in">
+              <div className="text-8xl mb-2 drop-shadow-xl">🍭</div>
+              <div className="bg-white/90 border-4 border-candy-pink rounded-3xl px-8 py-4 shadow-xl">
+                 <h2 className="text-4xl font-black text-candy-darkPink">甜蜜蜜!</h2>
+              </div>
+            </div>
+          </>
+        );
+      case 'rocket':
+        return (
+          <>
+            <div className="absolute inset-0 bg-blue-900/20 backdrop-blur-sm animate-pop-in"></div>
+            {/* Stars */}
+            {[...Array(10)].map((_, i) => (
+               <div key={i} className="absolute text-yellow-300 animate-pulse" style={{ top: `${Math.random()*100}%`, left: `${Math.random()*100}%`, fontSize: `${Math.random()*20 + 10}px` }}>⭐</div>
+            ))}
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-9xl animate-fly-up">🚀</div>
+            <div className="relative z-10 flex flex-col items-center animate-pop-in delay-300">
+               <h2 className="text-5xl font-black text-white drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]">一飞冲天!</h2>
+            </div>
+          </>
+        );
+      case 'magic':
+         return (
+          <>
+             <div className="absolute inset-0 bg-purple-500/10 backdrop-blur-sm"></div>
+             <div className="absolute text-9xl animate-pulse-glow" style={{ top: '20%', left: '10%' }}>🌈</div>
+             <div className="absolute text-8xl animate-bounce-short" style={{ bottom: '20%', right: '10%' }}>🦄</div>
+             <div className="relative z-10 flex flex-col items-center animate-pop-in">
+                <div className="text-8xl mb-2">✨</div>
+                <div className="bg-white/90 border-4 border-purple-300 rounded-3xl px-8 py-4 shadow-xl">
+                  <h2 className="text-4xl font-black text-purple-500">魔法时刻!</h2>
+                </div>
+             </div>
+          </>
+         );
+      case 'confetti':
+      default:
+        // Original implementation
+        return (
+            <>
+              <div className="absolute top-1/4 left-1/4 text-4xl animate-bounce-short delay-100">⭐</div>
+              <div className="absolute top-1/3 right-1/4 text-4xl animate-bounce-short delay-200">🎈</div>
+              <div className="absolute bottom-1/3 left-1/3 text-4xl animate-bounce-short delay-300">🍬</div>
+              <div className="absolute top-20 right-10 text-5xl animate-spin-slow text-yellow-400">✨</div>
+              <div className="absolute bottom-20 left-10 text-5xl animate-spin-slow text-pink-400">🌸</div>
+
+              <div className="relative z-10 flex flex-col items-center animate-pop-in scale-125">
+                <div className="text-8xl mb-4 drop-shadow-xl filter">🎉</div>
+                <div className="bg-white border-4 border-candy-yellow rounded-3xl px-8 py-4 shadow-[0_10px_0_rgba(0,0,0,0.1)] transform rotate-2">
+                  <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 tracking-wider">
+                    太棒啦!
+                  </h2>
+                </div>
+              </div>
+            </>
+        );
+    }
+  };
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none overflow-hidden">
-      {/* Semi-transparent backdrop */}
-      <div className="absolute inset-0 bg-white/60 backdrop-blur-sm animate-pop-in"></div>
+      {/* Base Backdrop (overridden by specific variants if needed) */}
+      {type !== 'rocket' && type !== 'magic' && <div className="absolute inset-0 bg-white/60 backdrop-blur-sm animate-pop-in"></div>}
       
-      {/* Confetti / Decorations (CSS positioned) */}
-      <div className="absolute top-1/4 left-1/4 text-4xl animate-bounce-short delay-100">⭐</div>
-      <div className="absolute top-1/3 right-1/4 text-4xl animate-bounce-short delay-200">🎈</div>
-      <div className="absolute bottom-1/3 left-1/3 text-4xl animate-bounce-short delay-300">🍬</div>
-      <div className="absolute top-20 right-10 text-5xl animate-spin-slow text-yellow-400">✨</div>
-      <div className="absolute bottom-20 left-10 text-5xl animate-spin-slow text-pink-400">🌸</div>
+      {renderContent()}
 
-      {/* Main Message */}
-      <div className="relative z-10 flex flex-col items-center animate-pop-in scale-125">
-        <div className="text-8xl mb-4 drop-shadow-xl filter">🎉</div>
-        <div className="bg-white border-4 border-candy-yellow rounded-3xl px-8 py-4 shadow-[0_10px_0_rgba(0,0,0,0.1)] transform rotate-2">
-          <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 tracking-wider">
-            太棒啦!
-          </h2>
-        </div>
-        <div className="mt-4 text-2xl font-bold text-candy-text animate-pulse">
+      {/* Common Reward Text */}
+      <div className="absolute bottom-1/4 z-20 animate-pop-in delay-200">
+         <div className="text-2xl font-bold text-candy-text bg-white/80 px-4 py-2 rounded-full shadow-md backdrop-blur-sm border border-white">
            答对啦 +{rewardAmount} 🍬
         </div>
       </div>
@@ -52,6 +122,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string>("");
   const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationType, setCelebrationType] = useState<CelebrationType>('confetti');
 
   const todayCount = getTodayRecord(gameData).count;
   const isOverLimit = todayCount >= gameData.settings.dailyLimit;
@@ -69,9 +140,14 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
   }, [gameData.settings, problem, isOverLimit]);
 
   const handleSuccess = () => {
+    // Pick random celebration
+    const types: CelebrationType[] = ['confetti', 'candy-rain', 'rocket', 'magic'];
+    const randomType = types[Math.floor(Math.random() * types.length)];
+    setCelebrationType(randomType);
+
     // Show celebration
     setShowCelebration(true);
-    setFeedbackMessage("太棒了!"); // Keep text feedback for screen readers or fallback
+    setFeedbackMessage("太棒了!"); 
     
     // Update Data
     const newData = {
@@ -93,7 +169,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
       setShowCelebration(false);
       setProblem(generateProblem(gameData.settings));
       setCurrentAbacusValue(0);
-    }, 1800); // Slightly longer delay to enjoy the animation
+    }, 2000); // Increased delay for animations to play out
   };
 
   const handleFailure = () => {
@@ -151,7 +227,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
 
   return (
     <div className="flex flex-col h-full w-full max-w-lg mx-auto relative">
-      <CelebrationOverlay show={showCelebration} rewardAmount={currentReward} />
+      <CelebrationOverlay show={showCelebration} rewardAmount={currentReward} type={celebrationType} />
 
       {/* Header */}
       <div className="flex justify-between items-center mb-2 px-2">
