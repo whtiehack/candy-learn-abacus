@@ -4,6 +4,7 @@ import { Button } from '../components/Button';
 import { AbacusVisual } from '../components/AbacusVisual';
 import { generateProblem } from '../services/mathService';
 import { saveGameData, updateDailyRecord, getTodayRecord } from '../services/storageService';
+import { DIFFICULTY_REWARDS } from '../constants';
 import { ArrowLeft, CheckCircle2, XCircle, Calculator, Star, PartyPopper } from 'lucide-react';
 
 interface GameViewProps {
@@ -13,7 +14,7 @@ interface GameViewProps {
 }
 
 // Sub-component for Celebration Overlay
-const CelebrationOverlay: React.FC<{ show: boolean }> = ({ show }) => {
+const CelebrationOverlay: React.FC<{ show: boolean; rewardAmount: number }> = ({ show, rewardAmount }) => {
   if (!show) return null;
 
   return (
@@ -37,7 +38,7 @@ const CelebrationOverlay: React.FC<{ show: boolean }> = ({ show }) => {
           </h2>
         </div>
         <div className="mt-4 text-2xl font-bold text-candy-text animate-pulse">
-           答对啦 +1 🍬
+           答对啦 +{rewardAmount} 🍬
         </div>
       </div>
     </div>
@@ -55,6 +56,9 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
   const todayCount = getTodayRecord(gameData).count;
   const isOverLimit = todayCount >= gameData.settings.dailyLimit;
   const useAbacusInput = gameData.settings.useAbacus;
+  
+  // Calculate potential reward for current difficulty
+  const currentReward = DIFFICULTY_REWARDS[gameData.settings.difficulty] || 1;
 
   // Initialize first problem
   useEffect(() => {
@@ -72,7 +76,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
     // Update Data
     const newData = {
       ...gameData,
-      candies: gameData.candies + 1,
+      candies: gameData.candies + currentReward,
       totalCorrect: gameData.totalCorrect + 1,
       streak: gameData.streak + 1
     };
@@ -147,7 +151,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
 
   return (
     <div className="flex flex-col h-full w-full max-w-lg mx-auto relative">
-      <CelebrationOverlay show={showCelebration} />
+      <CelebrationOverlay show={showCelebration} rewardAmount={currentReward} />
 
       {/* Header */}
       <div className="flex justify-between items-center mb-2 px-2">

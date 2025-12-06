@@ -1,4 +1,4 @@
-import { GameData, GameSettings, Sticker } from './types';
+import { GameData, GameSettings, Sticker, Difficulty } from './types';
 
 export const DEFAULT_SETTINGS: GameSettings = {
   useAbacus: true,
@@ -16,6 +16,14 @@ export const INITIAL_GAME_DATA: GameData = {
   streak: 0,
   settings: DEFAULT_SETTINGS,
   dailyRecords: [],
+};
+
+export const DIFFICULTY_REWARDS: Record<Difficulty, number> = {
+  'digit1_upto10': 1,
+  'digit1_upto20': 2,
+  'digit2': 3,
+  'chain3': 3,
+  'chain4': 4
 };
 
 export const STICKERS: Sticker[] = [
