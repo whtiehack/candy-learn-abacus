@@ -25,7 +25,7 @@ const DESKTOP_BEAD_W = 80;
 const DESKTOP_GAP = 60;
 const DESKTOP_SPACER = 36;
 
-const DRAG_THRESHOLD = 5;
+const DRAG_THRESHOLD = 8; // Increased slightly to prevent accidental triggers during taps
 
 // High Contrast, "Toy-Like" Colors
 const COLUMN_STYLES = [
@@ -85,7 +85,7 @@ const Bead: React.FC<{
     >
       {/* Bead Visual - Solid Opaque Colors */}
       <div 
-        className="w-full h-full rounded-[8px] md:rounded-[12px] relative overflow-hidden"
+        className="w-full h-full rounded-[8px] md:rounded-[12px] relative overflow-hidden pointer-events-none"
         style={{
           background: color.bg,
           boxShadow: `
@@ -114,8 +114,9 @@ const Rod: React.FC<{
   const heavenActive = value >= 5;
   const earthCount = value % 5;
   
-  const heavenDragRef = useRef<{ id: number, startY: number, initialActive: boolean } | null>(null);
-  const earthDragRef = useRef<{ id: number, startY: number, initialValue: number } | null>(null);
+  // Ref includes 'hasTriggered' to lock the move action during a single swipe gesture
+  const heavenDragRef = useRef<{ id: number, startY: number, initialActive: boolean, hasTriggered: boolean } | null>(null);
+  const earthDragRef = useRef<{ id: number, startY: number, initialValue: number, hasTriggered: boolean } | null>(null);
 
   const updateWithSound = (updater: (prev: number) => number) => {
     onUpdate(prev => {
@@ -129,21 +130,39 @@ const Rod: React.FC<{
   const handleHeavenPointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    heavenDragRef.current = { id: e.pointerId, startY: e.clientY, initialActive: heavenActive };
+    heavenDragRef.current = { 
+      id: e.pointerId, 
+      startY: e.clientY, 
+      initialActive: heavenActive,
+      hasTriggered: false 
+    };
   };
 
   const handleHeavenMove = (e: React.PointerEvent) => {
-    if (!heavenDragRef.current || heavenDragRef.current.id !== e.pointerId) return;
+    if (!heavenDragRef.current || heavenDragRef.current.id !== e.pointerId || heavenDragRef.current.hasTriggered) return;
+    
     const delta = e.clientY - heavenDragRef.current.startY;
-    if (!heavenDragRef.current.initialActive && delta > DRAG_THRESHOLD) updateWithSound(v => v >= 5 ? v : v + 5);
-    else if (heavenDragRef.current.initialActive && delta < -DRAG_THRESHOLD) updateWithSound(v => v >= 5 ? v - 5 : v);
+    
+    // Logic: Drag Down (> Threshold) -> Activate
+    if (!heavenDragRef.current.initialActive && delta > DRAG_THRESHOLD) {
+      updateWithSound(v => v >= 5 ? v : v + 5);
+      heavenDragRef.current.hasTriggered = true;
+    }
+    // Logic: Drag Up (< -Threshold) -> Deactivate
+    else if (heavenDragRef.current.initialActive && delta < -DRAG_THRESHOLD) {
+      updateWithSound(v => v >= 5 ? v - 5 : v);
+      heavenDragRef.current.hasTriggered = true;
+    }
   };
 
   const handleHeavenUp = (e: React.PointerEvent) => {
     if (!heavenDragRef.current) return;
-    if (Math.abs(e.clientY - heavenDragRef.current.startY) < 5) {
+    
+    // If we haven't triggered a drag move, treat it as a tap
+    if (!heavenDragRef.current.hasTriggered && Math.abs(e.clientY - heavenDragRef.current.startY) < DRAG_THRESHOLD) {
       updateWithSound(v => v >= 5 ? v - 5 : v + 5);
     }
+    
     heavenDragRef.current = null;
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
@@ -152,43 +171,65 @@ const Rod: React.FC<{
   const handleEarthDown = (e: React.PointerEvent, index: number) => {
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    earthDragRef.current = { id: e.pointerId, startY: e.clientY, initialValue: earthCount };
+    earthDragRef.current = { 
+      id: e.pointerId, 
+      startY: e.clientY, 
+      initialValue: earthCount,
+      hasTriggered: false 
+    };
   };
 
   const handleEarthMove = (e: React.PointerEvent, index: number) => {
-    if (!earthDragRef.current || earthDragRef.current.id !== e.pointerId) return;
+    if (!earthDragRef.current || earthDragRef.current.id !== e.pointerId || earthDragRef.current.hasTriggered) return;
+    
     const delta = e.clientY - earthDragRef.current.startY;
     
     // Drag Up (Negative Y) -> Add
+    // E.g. Dragging 2nd bead (index 1) up should result in value 2
     if (delta < -DRAG_THRESHOLD) {
-      updateWithSound(prev => {
-        const h = prev >= 5 ? 5 : 0;
-        const target = index + 1;
-        if (target > prev % 5) return h + target;
-        return prev;
-      });
+       const currentVal = earthDragRef.current.initialValue;
+       // If the bead I grabbed is below the beam (inactive), activate up to this bead
+       if (index >= currentVal) {
+          updateWithSound(prev => {
+             const h = prev >= 5 ? 5 : 0;
+             return h + (index + 1);
+          });
+          earthDragRef.current.hasTriggered = true;
+       }
     } 
     // Drag Down (Positive Y) -> Subtract
     else if (delta > DRAG_THRESHOLD) {
-      updateWithSound(prev => {
-        const h = prev >= 5 ? 5 : 0;
-        const target = index;
-        if (target < prev % 5) return h + target;
-        return prev;
-      });
+       const currentVal = earthDragRef.current.initialValue;
+       // If the bead I grabbed is at the beam (active), deactivate this and ones below it
+       if (index < currentVal) {
+          updateWithSound(prev => {
+             const h = prev >= 5 ? 5 : 0;
+             return h + index;
+          });
+          earthDragRef.current.hasTriggered = true;
+       }
     }
   };
 
   const handleEarthUp = (e: React.PointerEvent, index: number) => {
     if (!earthDragRef.current) return;
-    if (Math.abs(e.clientY - earthDragRef.current.startY) < 5) {
+    
+    // Tap Logic
+    if (!earthDragRef.current.hasTriggered && Math.abs(e.clientY - earthDragRef.current.startY) < DRAG_THRESHOLD) {
       updateWithSound(prev => {
          const h = prev >= 5 ? 5 : 0;
          const currentE = prev % 5;
-         const isBeadActive = index < currentE;
-         if (isBeadActive) {
-           return h + index;
+         
+         // If clicking a bead that is already active (top of stack), deactivate it
+         if (index < currentE) {
+           // Special case: If I click the 3rd active bead, I probably want to set value to 2
+           // But if I click the 1st active bead when 3 are active, do I set to 0?
+           // Standard behavior: Toggle the specific bead's active state relative to stack.
+           // If I click the bottom-most active bead (index == currentE - 1), remove it.
+           // If I click a bead in middle of active stack, set value to that index.
+           return h + index; 
          } else {
+           // Clicking an inactive bead: Activate up to here
            return h + (index + 1);
          }
       });
