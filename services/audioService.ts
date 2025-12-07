@@ -1,14 +1,12 @@
-// Local sound files
-// Please ensure you have created a 'sounds' folder in your project root
-// and added 'click.mp3', 'bead.mp3', and 'success.mp3'.
+// Audio Service
+// 使用本地文件 (需要在项目根目录下或 public 目录下存在 sounds 文件夹)
 
 const SOUND_URLS = {
-  // Common formats: .mp3 is best for cross-browser/iOS compatibility.
-  // If you downloaded .ogg files, either convert them to .mp3 
-  // or change the extensions below to .ogg
-  click: './sounds/click.mp3', 
-  bead: './sounds/bead.mp3',
-  success: './sounds/success.mp3',
+  // 使用绝对路径 (以 / 开头)，确保在任何路由下都能找到文件
+  // 请确保文件路径为: [项目根目录]/sounds/click.mp3 (或 public/sounds/click.mp3)
+  click: '/sounds/click.mp3', 
+  bead: '/sounds/bead.mp3',
+  success: '/sounds/success.mp3',
 };
 
 type SoundType = keyof typeof SOUND_URLS;
@@ -25,9 +23,9 @@ class AudioService {
         const audio = new Audio(url);
         audio.preload = 'auto';
         
-        // Add simple error handling to help developer
+        // Error handling
         audio.onerror = () => {
-          console.warn(`[AudioService] Failed to load sound: ${url}. Please ensure the file exists in the 'sounds' folder.`);
+          console.warn(`[AudioService] 无法加载音效文件: ${url}. 请检查 'sounds' 文件夹是否在 public 目录或项目根目录下，且文件名正确 (click.mp3, bead.mp3, success.mp3)。`);
         };
 
         this.sounds[key] = audio;
@@ -51,22 +49,23 @@ class AudioService {
 
     const audio = this.sounds[type];
     if (audio) {
-      // Clone node allows overlapping sounds (e.g. rapid typing/bead movement)
-      // However, cloning requests the file again which might cause lag on some devices.
-      // For simple games, resetting currentTime is usually efficient enough.
       try {
+        // 尝试重置播放进度以支持快速连点
         if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
             audio.currentTime = 0;
             const promise = audio.play();
             if (promise !== undefined) {
               promise.catch(error => {
-                // Auto-play policy or file loading error
-                // console.warn('Audio play failed', error);
+                // 忽略 "用户未交互前无法播放音频" 的标准浏览器错误
+                // console.debug('Audio auto-play prevented', error);
               });
             }
+        } else {
+            // 如果音频还没加载完，尝试直接播放
+            audio.play().catch(() => {});
         }
       } catch (e) {
-        // Ignore errors
+        // Ignore critical errors
       }
     }
   }
