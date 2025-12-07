@@ -10,15 +10,15 @@ interface HomeViewProps {
 
 export const HomeView: React.FC<HomeViewProps> = ({ changeView, candies }) => {
   return (
-    <div className="flex flex-col items-center justify-center h-full space-y-8 animate-fade-in">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl md:text-5xl font-black text-candy-text tracking-wider drop-shadow-sm">
+    <div className="flex flex-col items-center justify-center h-full space-y-4 md:space-y-8 animate-fade-in w-full">
+      <div className="text-center space-y-2 md:space-y-4 flex flex-col items-center">
+        <h1 className="text-3xl md:text-5xl font-black text-candy-text tracking-wider drop-shadow-sm leading-tight">
           糖果的<br/>
           <span className="text-candy-darkPink">珠心算小屋</span>
         </h1>
-        <div className="relative inline-block mt-4">
-          <div className="w-40 h-40 bg-white rounded-full flex items-center justify-center border-4 border-candy-mint shadow-xl">
-             <svg viewBox="0 0 100 100" className="w-28 h-28 text-candy-pink">
+        <div className="relative inline-block mt-2 md:mt-4">
+          <div className="w-32 h-32 md:w-40 md:h-40 bg-white rounded-full flex items-center justify-center border-4 border-candy-mint shadow-xl">
+             <svg viewBox="0 0 100 100" className="w-24 h-24 md:w-28 md:h-28 text-candy-pink">
                 <circle cx="50" cy="50" r="40" fill="currentColor" />
                 <circle cx="35" cy="40" r="5" fill="white" />
                 <circle cx="65" cy="40" r="5" fill="white" />
@@ -27,19 +27,19 @@ export const HomeView: React.FC<HomeViewProps> = ({ changeView, candies }) => {
                 <path d="M 60 20 L 70 40 L 80 20 Z" fill="currentColor" />
              </svg>
           </div>
-          <div className="absolute -top-2 -right-2 bg-candy-yellow text-candy-text text-xs font-bold px-3 py-1 rounded-full shadow-md border border-white transform rotate-12">
+          <div className="absolute -top-2 -right-2 bg-candy-yellow text-candy-text text-xs font-bold px-3 py-1 rounded-full shadow-md border border-white transform rotate-12 whitespace-nowrap">
              拥有的糖果: {candies} 🍬
           </div>
         </div>
       </div>
 
-      <div className="w-full max-w-xs space-y-4">
+      <div className="w-full max-w-xs space-y-3 md:space-y-4 flex-1 flex flex-col justify-center">
         <Button 
           variant="primary" 
           size="xl" 
           onClick={() => changeView(ViewState.LEVEL_SELECT)}
           icon={<Play fill="currentColor" />}
-          className="w-full"
+          className="w-full py-4 md:py-6 text-xl md:text-3xl"
         >
           开始游戏
         </Button>
@@ -64,6 +64,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ changeView, candies }) => {
           家长设置
         </Button>
       </div>
+      
+      {/* Footer spacer */}
+      <div className="h-4"></div>
     </div>
   );
 };

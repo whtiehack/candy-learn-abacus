@@ -37,16 +37,28 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-candy-pink/30 flex items-center justify-center p-4 font-sans text-candy-text select-none">
-      <div className="w-full max-w-md bg-white/80 backdrop-blur-sm rounded-[40px] shadow-2xl overflow-hidden h-[85vh] relative flex flex-col border-4 border-white">
+    // Mobile: Full screen, white/glass bg. Desktop: Centered card with pink background.
+    <div className="h-[100dvh] w-screen overflow-hidden bg-[#FFF0F5] md:bg-candy-pink/30 flex items-center justify-center font-sans text-candy-text select-none">
+      
+      {/* Container: On mobile it fills screen. On Desktop it's a fixed card. */}
+      <div className="
+        w-full h-full 
+        md:max-w-[480px] md:h-[85vh] md:max-h-[850px]
+        bg-white/90 md:bg-white/80 backdrop-blur-md 
+        md:rounded-[40px] md:shadow-2xl md:border-4 md:border-white 
+        relative flex flex-col overflow-hidden
+      ">
         
+        {/* Decorative Background Blobs (Visible on both, but constrained to container) */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10 opacity-50">
-          <div className="absolute top-[-50px] right-[-50px] w-40 h-40 bg-candy-mint rounded-full blur-3xl"></div>
-          <div className="absolute bottom-[-50px] left-[-50px] w-40 h-40 bg-candy-yellow rounded-full blur-3xl"></div>
+          <div className="absolute top-[-10%] right-[-20%] w-[60%] pt-[60%] bg-candy-mint rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-[-10%] left-[-20%] w-[60%] pt-[60%] bg-candy-yellow rounded-full blur-3xl animate-float" style={{animationDelay: '1.5s'}}></div>
         </div>
 
-        <main className="flex-1 p-6 relative z-10 overflow-hidden">
-          {renderView()}
+        <main className="flex-1 flex flex-col relative z-10 overflow-hidden w-full h-full">
+          <div className="flex-1 flex flex-col h-full w-full p-4 pt-safe pb-safe md:p-6">
+            {renderView()}
+          </div>
         </main>
 
       </div>

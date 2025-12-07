@@ -2,7 +2,7 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>糖果的珠心算小屋</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -71,16 +71,18 @@
       body {
         background-color: #FFF0F5;
         touch-action: manipulation;
+        /* Prevent pull-to-refresh on mobile */
+        overscroll-behavior-y: none;
       }
       /* Custom scrollbar for cute look */
       ::-webkit-scrollbar {
-        width: 8px;
+        width: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: #f1f1f1; 
+        background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: #F9C6DA; 
+        background: rgba(244, 143, 177, 0.5); 
         border-radius: 4px;
       }
       
@@ -102,6 +104,14 @@
       }
       @keyframes shine {
         100% { left: 200%; }
+      }
+
+      /* Safe Area Utilities */
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      .pt-safe {
+        padding-top: env(safe-area-inset-top);
       }
     </style>
   <script type="importmap">

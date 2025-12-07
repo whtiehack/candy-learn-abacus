@@ -140,16 +140,13 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
   }, [gameData.settings, problem, isOverLimit]);
 
   const handleSuccess = () => {
-    // Pick random celebration
     const types: CelebrationType[] = ['confetti', 'candy-rain', 'rocket', 'magic'];
     const randomType = types[Math.floor(Math.random() * types.length)];
     setCelebrationType(randomType);
 
-    // Show celebration
     setShowCelebration(true);
     setFeedbackMessage("太棒了!"); 
     
-    // Update Data
     const newData = {
       ...gameData,
       candies: gameData.candies + currentReward,
@@ -161,7 +158,6 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
     setGameData(updatedDataWithRecord);
     saveGameData(updatedDataWithRecord);
 
-    // Delay next problem to show animation
     setTimeout(() => {
       setSelectedAnswer(null);
       setIsCorrect(null);
@@ -169,7 +165,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
       setShowCelebration(false);
       setProblem(generateProblem(gameData.settings));
       setCurrentAbacusValue(0);
-    }, 2000); // Increased delay for animations to play out
+    }, 2000);
   };
 
   const handleFailure = () => {
@@ -183,7 +179,6 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
     }, 1000);
   };
 
-  // Handle Multiple Choice Click
   const handleChoiceAnswer = (choice: number) => {
     if (selectedAnswer !== null) return; 
 
@@ -198,9 +193,8 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
     }
   };
 
-  // Handle Abacus Submission
   const handleAbacusSubmit = () => {
-    if (isCorrect === true) return; // Prevent double submit
+    if (isCorrect === true) return;
 
     const correct = currentAbacusValue === problem?.answer;
     setIsCorrect(correct);
@@ -226,36 +220,37 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
   if (!problem) return <div>加载中...</div>;
 
   return (
-    <div className="flex flex-col h-full w-full max-w-lg mx-auto relative">
+    <div className="flex flex-col h-full w-full relative">
       <CelebrationOverlay show={showCelebration} rewardAmount={currentReward} type={celebrationType} />
 
-      {/* Header */}
-      <div className="flex justify-between items-center mb-2 px-2">
+      {/* Header: Compact on mobile */}
+      <div className="flex justify-between items-center mb-2 px-1 flex-shrink-0">
         <button onClick={() => changeView(ViewState.HOME)} className="p-2 bg-white rounded-full shadow-sm text-candy-text hover:bg-gray-50 transition-colors">
           <ArrowLeft size={24} />
         </button>
-        <div className="text-candy-text font-bold text-sm bg-white/60 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white">
-          今日进度: {todayCount} / {gameData.settings.dailyLimit}
+        <div className="text-candy-text font-bold text-sm bg-white/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white whitespace-nowrap">
+          今日: {todayCount} / {gameData.settings.dailyLimit}
         </div>
         <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm text-candy-darkPink font-bold border border-candy-pink/30 flex items-center gap-1">
           <span className="text-xl">🍬</span> {gameData.candies}
         </div>
       </div>
 
-      {/* Main Game Area */}
-      <div className="flex-1 flex flex-col items-center justify-start w-full overflow-y-auto pb-4 custom-scrollbar">
+      {/* Main Game Area: Scrollable if content is too tall, but tries to fit */}
+      <div className="flex-1 flex flex-col items-center w-full min-h-0 overflow-y-auto overflow-x-hidden pb-2">
         
-        {/* Question Display */}
+        {/* Question Display: Responsive Text Size */}
         <div className={`
-          relative p-6 rounded-[2rem] bg-white/50 backdrop-blur-sm shadow-sm border-2 border-white
-          text-5xl md:text-6xl font-black text-candy-text my-4 
-          flex flex-wrap items-center justify-center gap-2 md:gap-4 
+          flex-shrink-0 w-full
+          relative p-4 md:p-6 rounded-[1.5rem] bg-white/50 backdrop-blur-sm shadow-sm border-2 border-white
+          text-4xl md:text-6xl font-black text-candy-text my-2 md:my-4 
+          flex flex-wrap items-center justify-center gap-2
           transition-all duration-300
           ${isCorrect === false ? 'animate-wiggle border-red-200 bg-red-50/50' : ''}
           ${isCorrect === true ? 'scale-105 border-green-200 bg-green-50/50' : ''}
         `}>
            {/* Render Expression String */}
-           <div className="flex gap-3 items-center">
+           <div className="flex flex-wrap justify-center gap-x-2 gap-y-0 items-center">
              {problem.expression.split(' ').map((part, i) => (
                 <span key={i} className={['+', '-', 'x', '/'].includes(part) ? "text-candy-darkPink" : ""}>{part}</span>
              ))}
@@ -263,7 +258,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
            
            <span className="text-candy-darkPink">=</span>
            <div className={`
-             min-w-[3rem] px-2 h-20 md:h-24 rounded-xl border-b-4 bg-white shadow-inner
+             min-w-[3rem] px-2 h-14 md:h-24 rounded-xl border-b-4 bg-white shadow-inner
              flex items-center justify-center transition-colors duration-300
              ${isCorrect === true ? 'text-green-500 border-green-200' : 'text-candy-darkPink border-candy-pink/30'}
            `}>
@@ -271,9 +266,9 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
            </div>
         </div>
 
-        {/* Visual Aid / Input Method */}
+        {/* Visual Aid Area: Takes available space but can shrink */}
         {useAbacusInput && (
-          <div className="w-full flex justify-center scale-90 origin-top md:scale-100 mb-2">
+          <div className="w-full flex justify-center flex-shrink-0 mb-2 px-1">
              <AbacusVisual 
                 key={problem.id} 
                 problem={problem} 
@@ -283,36 +278,37 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
           </div>
         )}
 
-        {/* Feedback Area - Only visible if not in celebration mode (to avoid clutter) */}
-        {!showCelebration && (
-          <div className="h-8 flex items-center justify-center mb-2">
-            {feedbackMessage && (
-              <div className={`text-xl font-bold flex items-center gap-2 px-4 py-1 rounded-full bg-white/80 shadow-sm ${isCorrect === false ? 'text-orange-500' : 'text-green-500'}`}>
-                {isCorrect === false && <XCircle size={20}/>}
-                {feedbackMessage}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Feedback: Absolute or fixed height to prevent jump */}
+        <div className="h-8 flex-shrink-0 flex items-center justify-center mb-1 w-full">
+          {!showCelebration && feedbackMessage && (
+            <div className={`text-lg md:text-xl font-bold flex items-center gap-2 px-4 py-1 rounded-full bg-white/80 shadow-sm ${isCorrect === false ? 'text-orange-500' : 'text-green-500'}`}>
+              {isCorrect === false && <XCircle size={18}/>}
+              {feedbackMessage}
+            </div>
+          )}
+        </div>
 
-        {/* Interaction Area */}
-        <div className="w-full px-4 mt-auto">
+        {/* Spacer to push controls to bottom */}
+        <div className="flex-1"></div>
+
+        {/* Controls Area: Stick to bottom */}
+        <div className="w-full mt-auto flex-shrink-0">
           {useAbacusInput ? (
-            <div className="flex flex-col items-center gap-3">
-               <p className="text-sm text-candy-text/60 bg-white/40 px-3 py-1 rounded-full">拨动算珠得出答案，然后点击确认</p>
+            <div className="flex flex-col items-center gap-2">
+               <p className="text-xs md:text-sm text-candy-text/60 bg-white/40 px-3 py-1 rounded-full text-center">拨动算珠得出答案，然后点击确认</p>
                <Button 
                  variant="primary" 
-                 size="xl" 
+                 size="lg" // Slightly smaller on mobile default
                  onClick={handleAbacusSubmit}
                  disabled={isCorrect === true}
-                 className="w-full py-6 text-2xl shadow-lg shadow-candy-pink/30"
+                 className="w-full py-4 md:py-6 text-xl md:text-2xl shadow-lg shadow-candy-pink/30"
                  icon={<Calculator />}
                >
                  确认答案
                </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
               {problem.choices.map((choice, idx) => (
                 <Button
                   key={`${problem.id}-${choice}-${idx}`}
@@ -321,12 +317,12 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
                       ? (isCorrect ? 'secondary' : 'danger')
                       : 'neutral'
                   }
-                  size="lg"
+                  size="md" // Smaller button size on mobile
                   disabled={selectedAnswer !== null}
                   onClick={() => handleChoiceAnswer(choice)}
-                  className={`text-3xl py-6 rounded-2xl shadow-[0_4px_0_rgba(0,0,0,0.05)] ${
+                  className={`text-2xl md:text-3xl py-4 md:py-6 rounded-xl md:rounded-2xl shadow-[0_4px_0_rgba(0,0,0,0.05)] ${
                     selectedAnswer !== choice ? 'hover:-translate-y-1 hover:shadow-md' : ''
-                  }`}
+                  } w-full`}
                 >
                   {choice}
                 </Button>
