@@ -292,17 +292,24 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
         <div className="flex-1"></div>
 
         {/* Controls Area: Stick to bottom */}
-        <div className="w-full mt-auto flex-shrink-0">
+        <div className="w-full mt-auto flex-shrink-0 pb-2">
           {useAbacusInput ? (
-            <div className="flex flex-col items-center gap-2">
-               <p className="text-xs md:text-sm text-candy-text/60 bg-white/40 px-3 py-1 rounded-full text-center">拨动算珠得出答案，然后点击确认</p>
+            <div className="flex flex-col items-center gap-3 px-4">
+               <p className="text-xs md:text-sm text-candy-text/60 bg-white/40 px-3 py-1 rounded-full text-center">拨动算珠得出答案，然后点击下方按钮</p>
                <Button 
                  variant="primary" 
-                 size="lg" // Slightly smaller on mobile default
+                 size="lg" 
                  onClick={handleAbacusSubmit}
                  disabled={isCorrect === true}
-                 className="w-full py-4 md:py-6 text-xl md:text-2xl shadow-lg shadow-candy-pink/30"
-                 icon={<Calculator />}
+                 className={`
+                    w-full py-4 md:py-6 text-xl md:text-3xl shadow-xl 
+                    bg-gradient-to-b from-pink-400 to-pink-500 hover:from-pink-500 hover:to-pink-600
+                    border-b-8 border-pink-700 
+                    active:border-b-0 active:translate-y-2
+                    text-white font-black tracking-wider rounded-2xl
+                    ${isCorrect === true ? 'opacity-50 cursor-not-allowed filter grayscale' : 'animate-pulse-glow'}
+                 `}
+                 icon={<Calculator className="w-6 h-6 md:w-8 md:h-8" />}
                >
                  确认答案
                </Button>
