@@ -10,14 +10,20 @@ interface AbacusVisualProps {
 }
 
 // --- CONSTANTS FOR LAYOUT & PHYSICS ---
-// Using pixel values ensures the animation lands exactly on the beam
-const MOBILE_BEAD_H = 36;
-const MOBILE_BEAD_W = 60;
-const MOBILE_GAP = 36; // Distance to travel
+// Adjusted dimensions based on feedback:
+// 1. Reduced Bead Height (36 -> 32) to look less "long/tall".
+// 2. Reduced Gap (60 -> 42) to tighten the vertical space.
+// 3. Restored Labels.
 
-const DESKTOP_BEAD_H = 48;
+const MOBILE_BEAD_H = 32;
+const MOBILE_BEAD_W = 60;
+const MOBILE_GAP = 42; 
+const MOBILE_SPACER = 28; 
+
+const DESKTOP_BEAD_H = 44;
 const DESKTOP_BEAD_W = 80;
-const DESKTOP_GAP = 48;
+const DESKTOP_GAP = 60;
+const DESKTOP_SPACER = 36;
 
 const DRAG_THRESHOLD = 5;
 
@@ -77,9 +83,9 @@ const Bead: React.FC<{
         touchAction: 'none' // Critical for handling drags on mobile
       }}
     >
-      {/* Bead Visual - Solid Opaque Colors to prevent ghosting */}
+      {/* Bead Visual - Solid Opaque Colors */}
       <div 
-        className="w-full h-full rounded-[10px] md:rounded-[14px] relative overflow-hidden"
+        className="w-full h-full rounded-[8px] md:rounded-[12px] relative overflow-hidden"
         style={{
           background: color.bg,
           boxShadow: `
@@ -90,7 +96,7 @@ const Bead: React.FC<{
         }}
       >
          {/* Highlight */}
-         <div className="absolute top-1 left-2 right-2 h-[30%] bg-gradient-to-b from-white/60 to-transparent rounded-t-[8px]"></div>
+         <div className="absolute top-1 left-2 right-2 h-[30%] bg-gradient-to-b from-white/60 to-transparent rounded-t-[6px]"></div>
          {/* Center Hole Indication */}
          <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-black/10 -translate-y-1/2"></div>
       </div>
@@ -135,7 +141,6 @@ const Rod: React.FC<{
 
   const handleHeavenUp = (e: React.PointerEvent) => {
     if (!heavenDragRef.current) return;
-    // Tap logic
     if (Math.abs(e.clientY - heavenDragRef.current.startY) < 5) {
       updateWithSound(v => v >= 5 ? v - 5 : v + 5);
     }
@@ -158,9 +163,6 @@ const Rod: React.FC<{
     if (delta < -DRAG_THRESHOLD) {
       updateWithSound(prev => {
         const h = prev >= 5 ? 5 : 0;
-        // If we drag the 2nd bead up, we want count to be at least 2
-        // index 0 is top bead. index 0 represents "1".
-        // If I drag index 1 (2nd bead), I want 2.
         const target = index + 1;
         if (target > prev % 5) return h + target;
         return prev;
@@ -170,8 +172,6 @@ const Rod: React.FC<{
     else if (delta > DRAG_THRESHOLD) {
       updateWithSound(prev => {
         const h = prev >= 5 ? 5 : 0;
-        // If I drag index 1 (2nd bead) down, I want count to be 1.
-        // target is index (e.g. 1).
         const target = index;
         if (target < prev % 5) return h + target;
         return prev;
@@ -185,21 +185,10 @@ const Rod: React.FC<{
       updateWithSound(prev => {
          const h = prev >= 5 ? 5 : 0;
          const currentE = prev % 5;
-         // Tap index 0 (1st bead): If active (val>=1), deactivate it (val->0). Else activate (val->1).
-         // Actually abacus logic: 
-         // If I tap a bead that is currently "down" (inactive), I want to move it and all above it "up".
-         // If I tap a bead that is currently "up" (active), I want to move it and all below it "down".
-         
          const isBeadActive = index < currentE;
          if (isBeadActive) {
-           // It's active, so we are tapping it to deactivate
-           // If I tap the bottom-most active bead (index == currentE - 1), I remove just that one.
-           // If I tap the top-most active bead (index 0), I remove all.
-           // Tapping an active bead usually means "remove this amount".
-           // Let's set count to index.
            return h + index;
          } else {
-           // It's inactive, activate up to this bead
            return h + (index + 1);
          }
       });
@@ -211,21 +200,24 @@ const Rod: React.FC<{
   // Dimensions
   const beadH = isDesktop ? DESKTOP_BEAD_H : MOBILE_BEAD_H;
   const gap = isDesktop ? DESKTOP_GAP : MOBILE_GAP;
+  const spacerH = isDesktop ? DESKTOP_SPACER : MOBILE_SPACER;
+
   const heavenH = beadH + gap;
   const earthH = (beadH * 4) + gap;
 
   return (
     <div className="flex flex-col items-center relative z-10 mx-1 md:mx-2">
-      {/* Label */}
+      {/* Label Restored */}
       <div className="text-[#5D4037] font-black mb-1 opacity-70 text-sm md:text-lg">{label}</div>
       
       {/* ROD CONTAINER */}
       <div className="relative flex flex-col items-center">
          
          {/* Vertical Metal Rod (Z-0: Behind Beads) */}
-         <div className="absolute top-2 bottom-2 w-1.5 md:w-2 bg-gradient-to-r from-gray-400 via-gray-200 to-gray-400 rounded-full z-0"></div>
+         {/* Adjusted top to align with label bottom roughly */}
+         <div className="absolute top-0 bottom-2 w-1.5 md:w-2 bg-gradient-to-r from-gray-400 via-gray-200 to-gray-400 rounded-full z-0"></div>
 
-         {/* HEAVEN DECK (Z-10: Contains Beads) */}
+         {/* HEAVEN DECK (Z-10) */}
          <div style={{ height: heavenH }} className="w-full relative z-10 flex justify-center items-start pt-0">
             <Bead 
               active={heavenActive} 
@@ -238,16 +230,11 @@ const Rod: React.FC<{
             />
          </div>
 
-         {/* SPACER FOR BEAM (The Beam is absolute in parent, this just holds space in flex col) */}
-         <div style={{ height: isDesktop ? 24 : 20 }} className="w-full z-0"></div>
+         {/* SPACER FOR BEAM */}
+         <div style={{ height: spacerH }} className="w-full z-0"></div>
 
          {/* EARTH DECK (Z-10) */}
          <div style={{ height: earthH }} className="w-full relative z-10 flex flex-col justify-end items-center gap-0">
-            {/* Render 4 beads. Stacked from top to bottom visually in flex-end container? 
-                No, flex-col justify-end stacks them at bottom.
-                Bead 0 is Top (Value 1). Bead 3 is Bottom (Value 4).
-                We render them in order 0,1,2,3.
-            */}
             {[0, 1, 2, 3].map(i => (
               <Bead 
                 key={i}
@@ -299,26 +286,30 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({ problem, showValue, 
   const currentTotal = values[0] * 100 + values[1] * 10 + values[2];
   const reset = () => { setValues([0, 0, 0]); audioService.play('click'); };
 
-  // Calculate Beam Top Position for Absolute Layout
-  // Label ~24px + HeavenH.
-  // Using flexbox for parent makes this harder to align perfectly if we want the beam to cross ALL rods continuously.
-  // Best approach: Put the Beam inside the frame container, absolutely positioned, but with correct Z-index.
-  
+  // --- BEAM POSITION CALCULATION ---
   const beadH = isDesktop ? DESKTOP_BEAD_H : MOBILE_BEAD_H;
   const gap = isDesktop ? DESKTOP_GAP : MOBILE_GAP;
-  const heavenH = beadH + gap;
-  // Label height approximation + padding. 
-  // Mobile: Label ~24px. Padding top ~16px.
-  // Let's use a spacer approach for the beam too? 
-  // No, just Z-index it high.
-
-  // Beam Position Calculation:
-  // PaddingTop (p-3 = 12px) + InnerFramePaddingTop (pt-2 = 8px) + Label (mb-1 + text = ~28px) + HeavenH
-  // This is flaky. 
-  // BETTER: Render the Beam *inside* the flex container of rods? No, it breaks the long bar look.
-  // SOLUTION: Render the beam at Z-30. Adjust its `top` percentage or pixel offset carefully.
-  // Or, use a grid where the Beam is a row.
+  const spacerH = isDesktop ? DESKTOP_SPACER : MOBILE_SPACER;
   
+  // Height of Heaven Deck including travel gap
+  const heavenH = beadH + gap;
+  
+  // Container Padding Top (pt-2 = 8px)
+  const paddingTop = 8; 
+
+  // Label Height + Margin:
+  // Mobile: text-sm (line-height 20px) + mb-1 (4px) = 24px
+  // Desktop: text-lg (line-height 28px) + mb-1 (4px) = 32px
+  const labelH = isDesktop ? 32 : 24;
+  
+  // Beam Height
+  const beamH = isDesktop ? 24 : 20;
+
+  // Beam should be vertically centered within the spacer area
+  // Top = PaddingTop + LabelHeight + HeavenHeight + (SpacerHeight - BeamHeight) / 2
+  // Manual tweak: -3px to move beam up slightly as requested
+  const beamTop = paddingTop + labelH + heavenH + (spacerH - beamH) / 2 - 3;
+
   return (
     <div className="flex flex-col items-center justify-center select-none touch-none w-full">
       
@@ -335,20 +326,15 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({ problem, showValue, 
               style={{ backgroundImage: 'repeating-linear-gradient(45deg, #000000 0, #000000 1px, transparent 1px, transparent 10px)' }}></div>
 
          {/* INNER CANVAS */}
+         {/* Revert to pt-2 to allow labels to fit naturally without extra padding */}
          <div className="bg-[#FFF8E1] rounded-[10px] px-2 pb-2 pt-2 border border-[#D7CCC8] shadow-inner relative flex justify-center gap-1 md:gap-4">
             
             {/* THE BEAM (Z-30: On top of beads) */}
-            {/* We place it absolutely. We need to know where "Heaven" ends. 
-                Structure of Rod: Label -> Heaven -> Spacer -> Earth.
-                Beam should be exactly at Top of Label + Height of Label + Height of Heaven.
-                Since all columns are same height, we can pin it.
-            */}
             <div 
-               className="absolute left-0 right-0 h-[20px] md:h-[24px] bg-[#5D4037] z-30 shadow-md flex items-center justify-around border-y border-[#3E2723]"
+               className="absolute left-0 right-0 bg-[#5D4037] z-30 shadow-md flex items-center justify-around border-y border-[#3E2723]"
                style={{ 
-                 top: isDesktop ? (28 + heavenH) : (24 + heavenH), // Approx offset based on font sizes
-                 // Fine tuning: Label (text-sm=20px + mb-1=4px) = 24px on mobile. 
-                 // Desktop: Label (text-lg=28px + mb-1) approx 32px.
+                 top: beamTop, 
+                 height: beamH
                }}
             >
                {/* Beam Dots */}
