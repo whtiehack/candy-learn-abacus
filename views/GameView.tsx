@@ -5,7 +5,7 @@ import { AbacusVisual } from '../components/AbacusVisual';
 import { generateProblem } from '../services/mathService';
 import { saveGameData, updateDailyRecord, getTodayRecord } from '../services/storageService';
 import { DIFFICULTY_REWARDS } from '../constants';
-import { ArrowLeft, XCircle, Calculator } from 'lucide-react';
+import { ArrowLeft, XCircle, CheckCircle2 } from 'lucide-react';
 import { audioService } from '../services/audioService';
 
 interface GameViewProps {
@@ -25,7 +25,6 @@ const CelebrationOverlay: React.FC<{ show: boolean; rewardAmount: number; type: 
       case 'candy-rain':
         return (
           <>
-            {/* Falling Candies */}
             {[...Array(15)].map((_, i) => (
               <div 
                 key={i}
@@ -51,7 +50,6 @@ const CelebrationOverlay: React.FC<{ show: boolean; rewardAmount: number; type: 
         return (
           <>
             <div className="absolute inset-0 bg-blue-900/20 backdrop-blur-sm animate-pop-in"></div>
-            {/* Stars */}
             {[...Array(10)].map((_, i) => (
                <div key={i} className="absolute text-yellow-300 animate-pulse" style={{ top: `${Math.random()*100}%`, left: `${Math.random()*100}%`, fontSize: `${Math.random()*20 + 10}px` }}>⭐</div>
             ))}
@@ -77,7 +75,6 @@ const CelebrationOverlay: React.FC<{ show: boolean; rewardAmount: number; type: 
          );
       case 'confetti':
       default:
-        // Original implementation
         return (
             <>
               <div className="absolute top-1/4 left-1/4 text-4xl animate-bounce-short delay-100">⭐</div>
@@ -101,12 +98,8 @@ const CelebrationOverlay: React.FC<{ show: boolean; rewardAmount: number; type: 
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none overflow-hidden">
-      {/* Base Backdrop (overridden by specific variants if needed) */}
       {type !== 'rocket' && type !== 'magic' && <div className="absolute inset-0 bg-white/60 backdrop-blur-sm animate-pop-in"></div>}
-      
       {renderContent()}
-
-      {/* Common Reward Text */}
       <div className="absolute bottom-1/4 z-20 animate-pop-in delay-200">
          <div className="text-2xl font-bold text-candy-text bg-white/80 px-4 py-2 rounded-full shadow-md backdrop-blur-sm border border-white">
            答对啦 +{rewardAmount} 🍬
@@ -129,10 +122,8 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
   const isOverLimit = todayCount >= gameData.settings.dailyLimit;
   const useAbacusInput = gameData.settings.useAbacus;
   
-  // Calculate potential reward for current difficulty
   const currentReward = DIFFICULTY_REWARDS[gameData.settings.difficulty] || 1;
 
-  // Initialize first problem
   useEffect(() => {
     if (!problem && !isOverLimit) {
       setProblem(generateProblem(gameData.settings));
@@ -141,8 +132,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
   }, [gameData.settings, problem, isOverLimit]);
 
   const handleSuccess = () => {
-    audioService.play('success'); // Play success sound!
-
+    audioService.play('success'); 
     const types: CelebrationType[] = ['confetti', 'candy-rain', 'rocket', 'magic'];
     const randomType = types[Math.floor(Math.random() * types.length)];
     setCelebrationType(randomType);
@@ -172,7 +162,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
   };
 
   const handleFailure = () => {
-    setFeedbackMessage("加油，再试一次! 💪");
+    setFeedbackMessage("加油，再试一次!");
     setGameData(prev => ({ ...prev, streak: 0 }));
     
     setTimeout(() => {
@@ -226,42 +216,43 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
     <div className="flex flex-col h-full w-full relative">
       <CelebrationOverlay show={showCelebration} rewardAmount={currentReward} type={celebrationType} />
 
-      {/* Header: Compact on mobile */}
-      <div className="flex justify-between items-center mb-2 px-1 flex-shrink-0">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-1 px-1 flex-shrink-0">
         <button onClick={() => changeView(ViewState.HOME)} className="p-2 bg-white rounded-full shadow-sm text-candy-text hover:bg-gray-50 transition-colors">
           <ArrowLeft size={24} />
         </button>
-        <div className="text-candy-text font-bold text-sm bg-white/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white whitespace-nowrap">
-          今日: {todayCount} / {gameData.settings.dailyLimit}
-        </div>
-        <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm text-candy-darkPink font-bold border border-candy-pink/30 flex items-center gap-1">
-          <span className="text-xl">🍬</span> {gameData.candies}
+        <div className="flex gap-2">
+            <div className="text-candy-text font-bold text-sm bg-white/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white whitespace-nowrap">
+            {todayCount}/{gameData.settings.dailyLimit}
+            </div>
+            <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm text-candy-darkPink font-bold border border-candy-pink/30 flex items-center gap-1">
+            <span className="text-xl">🍬</span> {gameData.candies}
+            </div>
         </div>
       </div>
 
-      {/* Main Game Area: Scrollable if content is too tall, but tries to fit */}
-      <div className="flex-1 flex flex-col items-center w-full min-h-0 overflow-y-auto overflow-x-hidden pb-2 touch-pan-y">
+      {/* Main Game Area */}
+      <div className="flex-1 flex flex-col items-center w-full min-h-0 overflow-y-auto overflow-x-hidden pb-2 touch-pan-y scrollbar-hide">
         
-        {/* Question Display: Responsive Text Size */}
+        {/* Question Display */}
         <div className={`
           flex-shrink-0 w-full
-          relative p-4 md:p-6 rounded-[1.5rem] bg-white/50 backdrop-blur-sm shadow-sm border-2 border-white
-          text-4xl md:text-6xl font-black text-candy-text my-2 md:my-4 
-          flex flex-wrap items-center justify-center gap-2
+          relative p-3 md:p-5 rounded-2xl bg-white/60 backdrop-blur-md shadow-sm border border-white
+          text-3xl md:text-5xl font-black text-candy-text my-2
+          flex items-center justify-center gap-2 md:gap-4
           transition-all duration-300
-          ${isCorrect === false ? 'animate-wiggle border-red-200 bg-red-50/50' : ''}
-          ${isCorrect === true ? 'scale-105 border-green-200 bg-green-50/50' : ''}
+          ${isCorrect === false ? 'animate-wiggle border-red-200 bg-red-50/80' : ''}
+          ${isCorrect === true ? 'scale-105 border-green-200 bg-green-50/80' : ''}
         `}>
-           {/* Render Expression String */}
-           <div className="flex flex-wrap justify-center gap-x-2 gap-y-0 items-center">
+           <div className="flex justify-center gap-x-1 items-center">
              {problem.expression.split(' ').map((part, i) => (
-                <span key={i} className={['+', '-', 'x', '/'].includes(part) ? "text-candy-darkPink" : ""}>{part}</span>
+                <span key={i} className={['+', '-', 'x', '/'].includes(part) ? "text-candy-darkPink mx-1" : ""}>{part}</span>
              ))}
            </div>
            
            <span className="text-candy-darkPink">=</span>
            <div className={`
-             min-w-[3rem] px-2 h-14 md:h-24 rounded-xl border-b-4 bg-white shadow-inner
+             min-w-[2.5rem] px-3 h-12 md:h-16 rounded-xl border-b-4 bg-white shadow-inner
              flex items-center justify-center transition-colors duration-300
              ${isCorrect === true ? 'text-green-500 border-green-200' : 'text-candy-darkPink border-candy-pink/30'}
            `}>
@@ -269,9 +260,9 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
            </div>
         </div>
 
-        {/* Visual Aid Area: Takes available space but can shrink */}
+        {/* Abacus - The Hero Element */}
         {useAbacusInput && (
-          <div className="w-full flex justify-center flex-shrink-0 mb-2 px-1">
+          <div className="w-full flex-shrink-0 mb-2 px-0 md:px-4 z-10">
              <AbacusVisual 
                 key={problem.id} 
                 problem={problem} 
@@ -281,44 +272,44 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
           </div>
         )}
 
-        {/* Feedback: Absolute or fixed height to prevent jump */}
-        <div className="h-8 flex-shrink-0 flex items-center justify-center mb-1 w-full">
-          {!showCelebration && feedbackMessage && (
-            <div className={`text-lg md:text-xl font-bold flex items-center gap-2 px-4 py-1 rounded-full bg-white/80 shadow-sm ${isCorrect === false ? 'text-orange-500' : 'text-green-500'}`}>
-              {isCorrect === false && <XCircle size={18}/>}
+        {/* Feedback / Instructions */}
+        <div className="h-6 flex-shrink-0 flex items-center justify-center mb-2 w-full">
+          {!showCelebration && feedbackMessage ? (
+            <div className={`text-base font-bold flex items-center gap-1 px-3 py-1 rounded-full bg-white/90 shadow-sm ${isCorrect === false ? 'text-orange-500' : 'text-green-500'}`}>
+              {isCorrect === false && <XCircle size={16}/>}
               {feedbackMessage}
             </div>
+          ) : (
+            useAbacusInput && !isCorrect && (
+              <p className="text-xs text-candy-text/50">拨动算珠，然后点击确认</p>
+            )
           )}
         </div>
 
-        {/* Spacer to push controls to bottom */}
         <div className="flex-1"></div>
 
-        {/* Controls Area: Stick to bottom */}
-        <div className="w-full mt-auto flex-shrink-0 pb-2">
+        {/* Controls */}
+        <div className="w-full mt-auto flex-shrink-0 pb-2 md:pb-6">
           {useAbacusInput ? (
-            <div className="flex flex-col items-center gap-3 px-4">
-               <p className="text-xs md:text-sm text-candy-text/60 bg-white/40 px-3 py-1 rounded-full text-center">拨动算珠得出答案，然后点击下方按钮</p>
                <Button 
                  variant="primary" 
                  size="lg" 
                  onClick={handleAbacusSubmit}
                  disabled={isCorrect === true}
                  className={`
-                    w-full py-4 md:py-6 text-xl md:text-3xl shadow-xl 
-                    bg-gradient-to-b from-pink-400 to-pink-500 hover:from-pink-500 hover:to-pink-600
-                    border-b-8 border-pink-700 
-                    active:border-b-0 active:translate-y-2
+                    w-full py-3 md:py-5 text-xl md:text-2xl shadow-xl 
+                    bg-gradient-to-b from-candy-darkPink to-pink-500 
+                    border-b-4 border-pink-700 
                     text-white font-black tracking-wider rounded-2xl
-                    ${isCorrect === true ? 'opacity-50 cursor-not-allowed filter grayscale' : 'animate-pulse-glow'}
+                    flex items-center justify-center gap-2
+                    ${isCorrect === true ? 'opacity-0 pointer-events-none' : ''}
                  `}
-                 icon={<Calculator className="w-6 h-6 md:w-8 md:h-8" />}
                >
+                 <CheckCircle2 size={28} strokeWidth={3} />
                  确认答案
                </Button>
-            </div>
           ) : (
-            <div className="grid grid-cols-3 gap-2 md:gap-3">
+            <div className="grid grid-cols-3 gap-2 md:gap-4 px-2">
               {problem.choices.map((choice, idx) => (
                 <Button
                   key={`${problem.id}-${choice}-${idx}`}
@@ -327,12 +318,10 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
                       ? (isCorrect ? 'secondary' : 'danger')
                       : 'neutral'
                   }
-                  size="md" // Smaller button size on mobile
+                  size="md"
                   disabled={selectedAnswer !== null}
                   onClick={() => handleChoiceAnswer(choice)}
-                  className={`text-2xl md:text-3xl py-4 md:py-6 rounded-xl md:rounded-2xl shadow-[0_4px_0_rgba(0,0,0,0.05)] ${
-                    selectedAnswer !== choice ? 'hover:-translate-y-1 hover:shadow-md' : ''
-                  } w-full`}
+                  className="text-2xl py-4 rounded-xl shadow-sm w-full font-black"
                 >
                   {choice}
                 </Button>
