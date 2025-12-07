@@ -18,9 +18,10 @@ const Bead: React.FC<{
   onPointerUp: (e: React.PointerEvent) => void;
 }> = ({ active, type, colorClass, onPointerDown, onPointerMove, onPointerUp }) => {
   
+  // Increased translation distance because beads are taller now
   const translateClass = type === 'heaven'
-    ? (active ? 'translate-y-[20px] md:translate-y-[24px]' : 'translate-y-0') 
-    : (active ? 'translate-y-[-20px] md:translate-y-[-24px]' : 'translate-y-0'); 
+    ? (active ? 'translate-y-[32px] md:translate-y-[38px]' : 'translate-y-0') 
+    : (active ? 'translate-y-[-32px] md:translate-y-[-38px]' : 'translate-y-0'); 
 
   return (
     <div 
@@ -31,7 +32,7 @@ const Bead: React.FC<{
       onPointerLeave={onPointerUp} 
       className={`
         relative 
-        w-10 h-6 md:w-12 md:h-8 
+        w-14 h-8 md:w-20 md:h-10 
         rounded-full shadow-inner border border-white/30 
         cursor-pointer z-10 transition-transform duration-200 ease-out
         flex items-center justify-center touch-none select-none
@@ -40,7 +41,8 @@ const Bead: React.FC<{
       `}
     >
        <div className="w-full h-full rounded-full bg-black/10 absolute top-0 left-0 scale-90 blur-[1px] pointer-events-none"></div>
-       <div className="w-6 h-2 md:w-8 md:h-3 bg-white/30 rounded-full absolute top-1 left-2 blur-[2px] pointer-events-none"></div>
+       {/* Highlight adjustments for larger beads */}
+       <div className="w-8 h-3 md:w-12 md:h-4 bg-white/30 rounded-full absolute top-1.5 left-3 blur-[2px] pointer-events-none"></div>
     </div>
   );
 };
@@ -54,7 +56,6 @@ const Rod: React.FC<{
   const heavenActive = value >= 5;
   const earthCount = value % 5;
 
-  // Separate refs for Heaven and Earth to support simultaneous interaction (Pinch)
   const heavenDragRef = useRef<{ id: number, startY: number } | null>(null);
   const earthDragRef = useRef<{ id: number, startY: number } | null>(null);
 
@@ -72,7 +73,7 @@ const Rod: React.FC<{
     if (!heavenDragRef.current || heavenDragRef.current.id !== e.pointerId) return;
     
     const deltaY = e.clientY - heavenDragRef.current.startY;
-    const threshold = 10; 
+    const threshold = 15; // Slightly increased threshold for larger movement
 
     // Dragging DOWN -> Activate (+5)
     if (deltaY > threshold) {
@@ -91,7 +92,6 @@ const Rod: React.FC<{
     
     const deltaY = Math.abs(e.clientY - heavenDragRef.current.startY);
     if (deltaY < 5) {
-      // Toggle on tap
       onUpdate(prev => (prev >= 5 ? prev - 5 : prev + 5));
     }
     
@@ -114,7 +114,7 @@ const Rod: React.FC<{
     if (!earthDragRef.current || earthDragRef.current.id !== e.pointerId) return;
 
     const deltaY = e.clientY - earthDragRef.current.startY;
-    const threshold = 10; 
+    const threshold = 15; 
 
     // Sliding UP -> Push beads UP (Activate)
     if (deltaY < -threshold) {
@@ -147,7 +147,6 @@ const Rod: React.FC<{
   const handleEarthPointerUp = (e: React.PointerEvent, index: number) => {
     if (!earthDragRef.current || earthDragRef.current.id !== e.pointerId) return;
 
-    // Tap Logic
     const deltaY = Math.abs(e.clientY - earthDragRef.current.startY);
     if (deltaY < 5) {
        onUpdate(prev => {
@@ -166,7 +165,6 @@ const Rod: React.FC<{
                newEarth = index + 1;
             }
           }
-          // Clamp
           newEarth = Math.max(0, Math.min(4, newEarth));
           return currentHeaven + newEarth;
        });
@@ -177,16 +175,18 @@ const Rod: React.FC<{
   };
 
   return (
-    <div className="flex flex-col items-center mx-1 relative flex-1 min-w-[3.5rem] touch-none">
-      <div className="text-gray-500 font-bold mb-1 text-xs md:text-sm select-none pointer-events-none">{label}</div>
-      <div className="absolute top-6 bottom-6 w-1 bg-amber-800/60 z-0 pointer-events-none"></div>
+    // Widened Rod Container
+    <div className="flex flex-col items-center mx-2 md:mx-4 relative flex-1 min-w-[4.5rem] md:min-w-[6rem] touch-none">
+      <div className="text-gray-500 font-bold mb-2 text-sm md:text-base select-none pointer-events-none">{label}</div>
+      {/* Thicker central rod line */}
+      <div className="absolute top-8 bottom-8 w-1.5 bg-amber-800/60 z-0 pointer-events-none rounded-full"></div>
       
-      <div className="bg-candy-mint/20 border-2 border-candy-mint rounded-lg p-0.5 md:p-1 relative z-0 flex flex-col items-center select-none touch-none">
-        {/* Heaven Deck */}
+      <div className="bg-candy-mint/20 border-2 border-candy-mint rounded-xl p-1 md:p-1.5 relative z-0 flex flex-col items-center select-none touch-none">
+        {/* Heaven Deck - Taller and Wider */}
         <div className="
-           h-[50px] w-12 md:h-[64px] md:w-14 
+           h-[70px] w-[68px] md:h-[90px] md:w-[90px] 
            flex justify-center items-start 
-           bg-white/40 rounded-t-md mb-0.5 border-b-4 border-amber-800 relative
+           bg-white/40 rounded-t-lg mb-1 border-b-[6px] border-amber-800 relative
         ">
            <Bead 
              type="heaven" 
@@ -198,11 +198,11 @@ const Rod: React.FC<{
            />
         </div>
         
-        {/* Earth Deck */}
+        {/* Earth Deck - Taller and Wider */}
         <div className="
-           h-[130px] w-12 md:h-[160px] md:w-14 
+           h-[180px] w-[68px] md:h-[220px] md:w-[90px] 
            flex flex-col justify-end items-center 
-           bg-white/40 rounded-b-md gap-1 pb-1 relative
+           bg-white/40 rounded-b-lg gap-1.5 pb-2 relative
         ">
            {[0, 1, 2, 3].map(i => (
              <Bead 
@@ -222,17 +222,13 @@ const Rod: React.FC<{
 };
 
 export const AbacusVisual: React.FC<AbacusVisualProps> = ({ problem, showValue, onChange }) => {
-  // State for 3 rods: [Hundreds, Tens, Units]
   const [values, setValues] = useState<[number, number, number]>([0, 0, 0]);
 
-  // Reset when problem changes
   useEffect(() => {
     setValues([0, 0, 0]);
-    // Notify parent of reset (async safe)
     if (onChange) onChange(0);
-  }, [problem.id]); // Only reset if ID changes
+  }, [problem.id]);
 
-  // Sync state to parent whenever values change
   useEffect(() => {
      const total = values[0] * 100 + values[1] * 10 + values[2];
      if (onChange) onChange(total);
@@ -253,23 +249,24 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({ problem, showValue, 
   };
 
   return (
-    <div className="w-full flex flex-col items-center mb-2 md:mb-6">
-      <div className="relative bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl shadow-xl border-4 border-candy-mint flex items-end justify-center gap-1 md:gap-2 max-w-full touch-none">
+    <div className="w-full flex flex-col items-center mb-4 md:mb-8">
+      {/* Container with increased gap and padding */}
+      <div className="relative bg-white p-4 md:p-6 rounded-3xl shadow-xl border-4 border-candy-mint flex items-end justify-center gap-2 md:gap-6 max-w-full touch-none">
         <Rod label="百" value={values[0]} onUpdate={(updater) => updateRod(0, updater)} />
         <Rod label="十" value={values[1]} onUpdate={(updater) => updateRod(1, updater)} />
         <Rod label="个" value={values[2]} onUpdate={(updater) => updateRod(2, updater)} />
         
-        {/* Reset Button */}
+        {/* Reset Button - Moved slightly to not overlap larger beads */}
         <button 
           onClick={reset}
-          className="absolute -top-3 -right-3 bg-red-400 text-white p-1.5 md:p-2 rounded-full shadow-md hover:bg-red-500 transition-colors z-20"
+          className="absolute -top-4 -right-2 md:-right-4 bg-red-400 text-white p-2 md:p-3 rounded-full shadow-md hover:bg-red-500 transition-colors z-20"
           title="清空算盘"
         >
-          <RotateCcw size={14} className="md:w-4 md:h-4" />
+          <RotateCcw size={18} className="md:w-6 md:h-6" />
         </button>
       </div>
       
-      <div className={`mt-1 md:mt-2 h-5 md:h-6 flex items-center justify-center text-xs md:text-sm text-candy-text/60 font-bold transition-opacity ${showValue ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`mt-2 md:mt-4 h-6 md:h-8 flex items-center justify-center text-sm md:text-lg text-candy-text/60 font-bold transition-opacity ${showValue ? 'opacity-100' : 'opacity-0'}`}>
         {showValue ? `当前数值: ${currentTotal}` : '数值已隐藏'}
       </div>
     </div>
