@@ -13,6 +13,9 @@ const SOUND_SOURCES = {
     'https://downsc.chinaz.net/Files/DownLoad/sound1/202203/y684.mp3',
     'https://downsc.chinaz.net/Files/DownLoad/sound1/202408/xm2990.mp3'
   ],
+  wrong: [
+     'https://downsc.chinaz.net/Files/DownLoad/sound1/202203/15478.mp3'
+  ]
 };
 
 type SoundType = keyof typeof SOUND_SOURCES;

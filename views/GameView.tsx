@@ -21,6 +21,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string>("");
   const [showCelebration, setShowCelebration] = useState(false);
+  const [shakeError, setShakeError] = useState(false);
 
   const todayCount = getTodayRecord(gameData).count;
   const isOverLimit = todayCount >= gameData.settings.dailyLimit;
@@ -62,12 +63,15 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
   };
 
   const handleFailure = () => {
+    audioService.play('wrong');
     setFeedbackMessage("加油，再试一次!");
     setGameData(prev => ({ ...prev, streak: 0 }));
+    setShakeError(true);
     setTimeout(() => {
       setSelectedAnswer(null);
       setIsCorrect(null);
       setFeedbackMessage("");
+      setShakeError(false);
     }, 1000);
   };
 
@@ -139,6 +143,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
         flex items-center justify-center gap-2 md:gap-4
         transition-colors duration-300
         ${isCorrect === false ? 'border-red-200 bg-red-50' : ''}
+        ${shakeError ? 'animate-shake' : ''}
       `}>
          <div className="text-4xl md:text-5xl font-black text-candy-text flex items-center gap-2">
            {problem.expression.split(' ').map((part, i) => (
@@ -150,9 +155,17 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
            min-w-[3.5rem] h-12 md:h-14 rounded-xl border-b-4 bg-gray-50 shadow-inner
            flex items-center justify-center text-3xl font-bold
            ${isCorrect === true ? 'text-green-500' : 'text-candy-pink'}
+           ${isCorrect === false ? 'text-red-400' : ''}
          `}>
            {isCorrect === true ? problem.answer : '?'}
          </div>
+         
+         {/* Simple X overlay on card when wrong */}
+         {shakeError && (
+             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                 <XCircle className="w-16 h-16 text-red-400/80 animate-pop-in" />
+             </div>
+         )}
       </div>
 
       {/* Main Game Area */}
@@ -173,7 +186,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
       <div className="flex-shrink-0 w-full pb-2 md:pb-6 px-1">
         <div className="h-6 flex items-center justify-center mb-2">
            {feedbackMessage && !showCelebration && (
-             <span className={`font-bold ${isCorrect === false ? 'text-red-500' : 'text-green-600'}`}>
+             <span className={`font-bold animate-pulse ${isCorrect === false ? 'text-red-500' : 'text-green-600'}`}>
                {feedbackMessage}
              </span>
            )}
@@ -210,7 +223,9 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
                 size="md"
                 disabled={selectedAnswer !== null}
                 onClick={() => handleChoiceAnswer(choice)}
-                className="text-2xl py-4 rounded-xl shadow-sm w-full font-black h-20"
+                className={`text-2xl py-4 rounded-xl shadow-sm w-full font-black h-20 ${
+                    selectedAnswer === choice && !isCorrect ? 'animate-shake' : ''
+                }`}
               >
                 {choice}
               </Button>
