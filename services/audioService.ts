@@ -9,9 +9,9 @@ const SOUND_SOURCES = {
     'https://downsc.chinaz.net/Files/DownLoad/sound1/202505/xm3683.mp3'
   ],
   success: [
-    'https://downsc.chinaz.net/Files/DownLoad/sound1/201610/7869.mp3',
-    'https://downsc.chinaz.net/Files/DownLoad/sound1/201409/4899.mp3',
-    'https://downsc.chinaz.net/Files/DownLoad/sound1/201706/8813.mp3'
+    'https://downsc.chinaz.net/Files/DownLoad/sound1/201702/8378.mp3',
+    'https://downsc.chinaz.net/Files/DownLoad/sound1/202203/y684.mp3',
+    'https://downsc.chinaz.net/Files/DownLoad/sound1/202408/xm2990.mp3'
   ],
 };
 
