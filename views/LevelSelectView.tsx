@@ -42,7 +42,7 @@ export const LevelSelectView: React.FC<LevelSelectViewProps> = ({ changeView, ga
         <h2 className="text-2xl md:text-3xl font-bold text-candy-text">选择挑战难度</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-1 space-y-3 pb-safe">
+      <div className="flex-1 overflow-y-auto pr-1 space-y-3 pb-safe touch-pan-y">
         
         <Button 
           variant="secondary" 

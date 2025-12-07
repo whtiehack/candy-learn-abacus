@@ -237,7 +237,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
       </div>
 
       {/* Main Game Area: Scrollable if content is too tall, but tries to fit */}
-      <div className="flex-1 flex flex-col items-center w-full min-h-0 overflow-y-auto overflow-x-hidden pb-2">
+      <div className="flex-1 flex flex-col items-center w-full min-h-0 overflow-y-auto overflow-x-hidden pb-2 touch-pan-y">
         
         {/* Question Display: Responsive Text Size */}
         <div className={`

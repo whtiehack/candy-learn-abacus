@@ -38,7 +38,8 @@ const App: React.FC = () => {
 
   return (
     // Mobile: Full screen, white/glass bg. Desktop: Centered card with pink background.
-    <div className="h-[100dvh] w-screen overflow-hidden bg-[#FFF0F5] md:bg-candy-pink/30 flex items-center justify-center font-sans text-candy-text select-none">
+    // Changed h-[100dvh] to h-full because body is now fixed height 100%
+    <div className="h-full w-full overflow-hidden bg-[#FFF0F5] md:bg-candy-pink/30 flex items-center justify-center font-sans text-candy-text select-none">
       
       {/* Container: On mobile it fills screen. On Desktop it's a fixed card. */}
       <div className="

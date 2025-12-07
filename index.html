@@ -68,12 +68,31 @@
       }
     </script>
     <style>
+      /* Strict reset for full-screen app feel */
+      html, body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden; /* Disable scrolling on the document root */
+        position: fixed; /* Force fix layout on iOS to prevent rubber banding */
+      }
+      
       body {
         background-color: #FFF0F5;
-        touch-action: manipulation;
-        /* Prevent pull-to-refresh on mobile */
-        overscroll-behavior-y: none;
+        touch-action: none; /* Disable browser zooming/panning globally */
+        overscroll-behavior: none; /* Prevent scroll chaining */
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
       }
+
+      #root {
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+      }
+
       /* Custom scrollbar for cute look */
       ::-webkit-scrollbar {
         width: 6px;
@@ -112,6 +131,13 @@
       }
       .pt-safe {
         padding-top: env(safe-area-inset-top);
+      }
+      
+      /* Utilities for enabling scroll on specific elements */
+      .scroll-y-auto {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y; /* Re-enable vertical scroll gesture */
       }
     </style>
   <script type="importmap">

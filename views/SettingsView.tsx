@@ -59,7 +59,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ changeView, gameData
         <h2 className="text-3xl font-bold text-candy-text">家长设置</h2>
       </div>
 
-      <div className="space-y-6 bg-white rounded-3xl p-6 shadow-sm border border-candy-pink/20 flex-1 overflow-y-auto">
+      <div className="space-y-6 bg-white rounded-3xl p-6 shadow-sm border border-candy-pink/20 flex-1 overflow-y-auto touch-pan-y">
         
         {/* Toggle Abacus */}
         <div className="flex items-center justify-between py-2 border-b border-gray-100">

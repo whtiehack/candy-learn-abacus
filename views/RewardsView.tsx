@@ -105,7 +105,7 @@ export const RewardsView: React.FC<RewardsViewProps> = ({ changeView, gameData, 
         </h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-visible pb-8 px-2 md:px-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto overflow-x-visible pb-8 px-2 md:px-4 custom-scrollbar touch-pan-y">
         
         {/* Stats Card */}
         <div className="grid grid-cols-2 gap-3 mb-6">
