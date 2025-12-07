@@ -18,7 +18,7 @@ const Bead: React.FC<{
   onPointerUp: (e: React.PointerEvent) => void;
 }> = ({ active, type, colorClass, onPointerDown, onPointerMove, onPointerUp }) => {
   
-  // Increased translation distance because beads are taller now
+  // Use a faster transition (100ms) for snappier feedback, reducing the "laggy" feel
   const translateClass = type === 'heaven'
     ? (active ? 'translate-y-[32px] md:translate-y-[38px]' : 'translate-y-0') 
     : (active ? 'translate-y-[-32px] md:translate-y-[-38px]' : 'translate-y-0'); 
@@ -34,14 +34,13 @@ const Bead: React.FC<{
         relative 
         w-14 h-8 md:w-20 md:h-10 
         rounded-full shadow-inner border border-white/30 
-        cursor-pointer z-10 transition-transform duration-200 ease-out
+        cursor-pointer z-10 transition-transform duration-100 ease-out
         flex items-center justify-center touch-none select-none
         ${colorClass}
         ${translateClass}
       `}
     >
        <div className="w-full h-full rounded-full bg-black/10 absolute top-0 left-0 scale-90 blur-[1px] pointer-events-none"></div>
-       {/* Highlight adjustments for larger beads */}
        <div className="w-8 h-3 md:w-12 md:h-4 bg-white/30 rounded-full absolute top-1.5 left-3 blur-[2px] pointer-events-none"></div>
     </div>
   );
@@ -56,34 +55,51 @@ const Rod: React.FC<{
   const heavenActive = value >= 5;
   const earthCount = value % 5;
 
-  const heavenDragRef = useRef<{ id: number, startY: number } | null>(null);
-  const earthDragRef = useRef<{ id: number, startY: number } | null>(null);
+  // Refs now store the INITIAL state at the start of the drag
+  const heavenDragRef = useRef<{ id: number, startY: number, initialActive: boolean } | null>(null);
+  const earthDragRef = useRef<{ id: number, startY: number, initialValue: number } | null>(null);
 
-  // --- Heaven Bead Logic ---
+  const DRAG_THRESHOLD = 15; // Pixels to move before action triggers
+
+  // --- Heaven Bead Logic (Upper Deck) ---
   const handleHeavenPointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     heavenDragRef.current = {
       id: e.pointerId,
-      startY: e.clientY
+      startY: e.clientY,
+      initialActive: heavenActive
     };
   };
 
   const handleHeavenPointerMove = (e: React.PointerEvent) => {
     if (!heavenDragRef.current || heavenDragRef.current.id !== e.pointerId) return;
     
+    // Calculate absolute distance from START point
     const deltaY = e.clientY - heavenDragRef.current.startY;
-    const threshold = 15; // Slightly increased threshold for larger movement
+    const wasActive = heavenDragRef.current.initialActive;
 
-    // Dragging DOWN -> Activate (+5)
-    if (deltaY > threshold) {
-      onUpdate(prev => (prev >= 5 ? prev : prev + 5));
-      heavenDragRef.current.startY = e.clientY; 
-    }
-    // Dragging UP -> Deactivate (-5)
-    else if (deltaY < -threshold) {
-      onUpdate(prev => (prev >= 5 ? prev - 5 : prev));
-      heavenDragRef.current.startY = e.clientY;
+    // Logic:
+    // If it WAS UP (Inactive) -> Dragging DOWN (+Delta) activates it.
+    // If it WAS DOWN (Active) -> Dragging UP (-Delta) deactivates it.
+    // We use the initial state as the anchor.
+
+    if (!wasActive) {
+      // Trying to pull down (Activate +5)
+      if (deltaY > DRAG_THRESHOLD) {
+        onUpdate(prev => (prev >= 5 ? prev : prev + 5));
+      } else {
+        // If user pulls down but then goes back up near start, revert
+        onUpdate(prev => (prev >= 5 ? prev - 5 : prev));
+      }
+    } else {
+      // Trying to push up (Deactivate -5)
+      if (deltaY < -DRAG_THRESHOLD) {
+        onUpdate(prev => (prev >= 5 ? prev - 5 : prev));
+      } else {
+        // If user pushes up but comes back down near start, revert
+        onUpdate(prev => (prev >= 5 ? prev : prev + 5));
+      }
     }
   };
 
@@ -91,6 +107,7 @@ const Rod: React.FC<{
     if (!heavenDragRef.current || heavenDragRef.current.id !== e.pointerId) return;
     
     const deltaY = Math.abs(e.clientY - heavenDragRef.current.startY);
+    // Tap detection: If moved less than 5px, treat as a toggle click
     if (deltaY < 5) {
       onUpdate(prev => (prev >= 5 ? prev - 5 : prev + 5));
     }
@@ -100,13 +117,14 @@ const Rod: React.FC<{
   };
 
 
-  // --- Earth Bead Logic ---
+  // --- Earth Bead Logic (Lower Deck) ---
   const handleEarthPointerDown = (e: React.PointerEvent, index: number) => {
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     earthDragRef.current = {
       id: e.pointerId,
-      startY: e.clientY
+      startY: e.clientY,
+      initialValue: earthCount // Snapshot the value (0-4) when touched
     };
   };
 
@@ -114,33 +132,38 @@ const Rod: React.FC<{
     if (!earthDragRef.current || earthDragRef.current.id !== e.pointerId) return;
 
     const deltaY = e.clientY - earthDragRef.current.startY;
-    const threshold = 15; 
+    
+    // Determine intention based on the specific bead touched (index)
+    // index 0 is top earth bead, index 3 is bottom earth bead.
+    
+    // Intention A: Push UP (Activate)
+    // Target value becomes index + 1 (e.g. touching 2nd bead (idx 1) and pushing up makes value 2)
+    
+    // Intention B: Push DOWN (Deactivate)
+    // Target value becomes index (e.g. touching 2nd bead (idx 1) and pushing down makes value 1)
 
-    // Sliding UP -> Push beads UP (Activate)
-    if (deltaY < -threshold) {
-       const targetCount = index + 1;
-       onUpdate(prev => {
-         const currentHeaven = prev >= 5 ? 5 : 0;
-         const currentEarth = prev % 5;
-         if (currentEarth < targetCount) {
-           return currentHeaven + targetCount;
-         }
-         return prev;
-       });
-       earthDragRef.current.startY = e.clientY;
-    }
-    // Sliding DOWN -> Push beads DOWN (Deactivate)
-    else if (deltaY > threshold) {
-       const targetCount = index;
-       onUpdate(prev => {
-         const currentHeaven = prev >= 5 ? 5 : 0;
-         const currentEarth = prev % 5;
-         if (currentEarth > targetCount) {
-           return currentHeaven + targetCount;
-         }
-         return prev;
-       });
-       earthDragRef.current.startY = e.clientY;
+    const targetValueUp = index + 1;
+    const targetValueDown = index;
+
+    if (deltaY < -DRAG_THRESHOLD) {
+      // Dragging UP -> Set Value to targetValueUp
+      onUpdate(prev => {
+        const heaven = prev >= 5 ? 5 : 0;
+        return heaven + targetValueUp;
+      });
+    } else if (deltaY > DRAG_THRESHOLD) {
+      // Dragging DOWN -> Set Value to targetValueDown
+      onUpdate(prev => {
+        const heaven = prev >= 5 ? 5 : 0;
+        return heaven + targetValueDown;
+      });
+    } else {
+      // Inside Deadzone: Revert to whatever it was at start of drag
+      // This prevents the "bounce" if you just wiggle your finger slightly
+      onUpdate(prev => {
+        const heaven = prev >= 5 ? 5 : 0;
+        return heaven + (earthDragRef.current?.initialValue ?? 0);
+      });
     }
   };
 
@@ -148,25 +171,34 @@ const Rod: React.FC<{
     if (!earthDragRef.current || earthDragRef.current.id !== e.pointerId) return;
 
     const deltaY = Math.abs(e.clientY - earthDragRef.current.startY);
+    
+    // Tap Logic
     if (deltaY < 5) {
        onUpdate(prev => {
-          const currentHeaven = prev >= 5 ? 5 : 0;
+          const heaven = prev >= 5 ? 5 : 0;
           const currentEarth = prev % 5;
           let newEarth = currentEarth;
 
-          if (index === currentEarth) {
-            newEarth = currentEarth + 1;
-          } else if (index === currentEarth - 1) {
-            newEarth = currentEarth - 1;
-          } else {
-            if (index < currentEarth) {
-               newEarth = index;
+          // Smart Tap:
+          // If tapping the exact bead that is the top of the stack -> Remove it.
+          // If tapping a bead that is currently inactive -> Add it (and ones above).
+          // If tapping a bead in the middle of active stack -> Set value to that bead index.
+          
+          if (index < currentEarth) {
+            // Tapping an active bead
+            if (index === currentEarth - 1) {
+              // It's the bottom-most active bead, remove it
+              newEarth = index;
             } else {
-               newEarth = index + 1;
+               // It's in the middle of stack, remove beads below it
+               newEarth = index + 1; 
             }
+          } else {
+            // Tapping an inactive bead -> activate up to this point
+            newEarth = index + 1;
           }
-          newEarth = Math.max(0, Math.min(4, newEarth));
-          return currentHeaven + newEarth;
+
+          return heaven + newEarth;
        });
     }
 
@@ -175,14 +207,12 @@ const Rod: React.FC<{
   };
 
   return (
-    // Widened Rod Container
     <div className="flex flex-col items-center mx-2 md:mx-4 relative flex-1 min-w-[4.5rem] md:min-w-[6rem] touch-none">
       <div className="text-gray-500 font-bold mb-2 text-sm md:text-base select-none pointer-events-none">{label}</div>
-      {/* Thicker central rod line */}
       <div className="absolute top-8 bottom-8 w-1.5 bg-amber-800/60 z-0 pointer-events-none rounded-full"></div>
       
       <div className="bg-candy-mint/20 border-2 border-candy-mint rounded-xl p-1 md:p-1.5 relative z-0 flex flex-col items-center select-none touch-none">
-        {/* Heaven Deck - Taller and Wider */}
+        {/* Heaven Deck */}
         <div className="
            h-[70px] w-[68px] md:h-[90px] md:w-[90px] 
            flex justify-center items-start 
@@ -198,7 +228,7 @@ const Rod: React.FC<{
            />
         </div>
         
-        {/* Earth Deck - Taller and Wider */}
+        {/* Earth Deck */}
         <div className="
            h-[180px] w-[68px] md:h-[220px] md:w-[90px] 
            flex flex-col justify-end items-center 
@@ -250,13 +280,11 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({ problem, showValue, 
 
   return (
     <div className="w-full flex flex-col items-center mb-4 md:mb-8">
-      {/* Container with increased gap and padding */}
       <div className="relative bg-white p-4 md:p-6 rounded-3xl shadow-xl border-4 border-candy-mint flex items-end justify-center gap-2 md:gap-6 max-w-full touch-none">
         <Rod label="百" value={values[0]} onUpdate={(updater) => updateRod(0, updater)} />
         <Rod label="十" value={values[1]} onUpdate={(updater) => updateRod(1, updater)} />
         <Rod label="个" value={values[2]} onUpdate={(updater) => updateRod(2, updater)} />
         
-        {/* Reset Button - Moved slightly to not overlap larger beads */}
         <button 
           onClick={reset}
           className="absolute -top-4 -right-2 md:-right-4 bg-red-400 text-white p-2 md:p-3 rounded-full shadow-md hover:bg-red-500 transition-colors z-20"
