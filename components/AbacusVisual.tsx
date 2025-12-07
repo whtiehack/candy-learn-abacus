@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MathProblem } from '../types';
 import { RotateCcw } from 'lucide-react';
+import { audioService } from '../services/audioService';
 
 interface AbacusVisualProps {
   problem: MathProblem;
@@ -61,6 +62,17 @@ const Rod: React.FC<{
 
   const DRAG_THRESHOLD = 15; // Pixels to move before action triggers
 
+  // Helper to update and play sound only if value changes
+  const updateWithSound = (updater: (prev: number) => number) => {
+    onUpdate(prev => {
+      const next = updater(prev);
+      if (next !== prev) {
+        audioService.play('bead');
+      }
+      return next;
+    });
+  };
+
   // --- Heaven Bead Logic (Upper Deck) ---
   const handleHeavenPointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
@@ -79,26 +91,21 @@ const Rod: React.FC<{
     const deltaY = e.clientY - heavenDragRef.current.startY;
     const wasActive = heavenDragRef.current.initialActive;
 
-    // Logic:
-    // If it WAS UP (Inactive) -> Dragging DOWN (+Delta) activates it.
-    // If it WAS DOWN (Active) -> Dragging UP (-Delta) deactivates it.
-    // We use the initial state as the anchor.
-
     if (!wasActive) {
       // Trying to pull down (Activate +5)
       if (deltaY > DRAG_THRESHOLD) {
-        onUpdate(prev => (prev >= 5 ? prev : prev + 5));
+        updateWithSound(prev => (prev >= 5 ? prev : prev + 5));
       } else {
         // If user pulls down but then goes back up near start, revert
-        onUpdate(prev => (prev >= 5 ? prev - 5 : prev));
+        updateWithSound(prev => (prev >= 5 ? prev - 5 : prev));
       }
     } else {
       // Trying to push up (Deactivate -5)
       if (deltaY < -DRAG_THRESHOLD) {
-        onUpdate(prev => (prev >= 5 ? prev - 5 : prev));
+        updateWithSound(prev => (prev >= 5 ? prev - 5 : prev));
       } else {
         // If user pushes up but comes back down near start, revert
-        onUpdate(prev => (prev >= 5 ? prev : prev + 5));
+        updateWithSound(prev => (prev >= 5 ? prev : prev + 5));
       }
     }
   };
@@ -109,7 +116,7 @@ const Rod: React.FC<{
     const deltaY = Math.abs(e.clientY - heavenDragRef.current.startY);
     // Tap detection: If moved less than 5px, treat as a toggle click
     if (deltaY < 5) {
-      onUpdate(prev => (prev >= 5 ? prev - 5 : prev + 5));
+      updateWithSound(prev => (prev >= 5 ? prev - 5 : prev + 5));
     }
     
     heavenDragRef.current = null;
@@ -133,34 +140,24 @@ const Rod: React.FC<{
 
     const deltaY = e.clientY - earthDragRef.current.startY;
     
-    // Determine intention based on the specific bead touched (index)
-    // index 0 is top earth bead, index 3 is bottom earth bead.
-    
-    // Intention A: Push UP (Activate)
-    // Target value becomes index + 1 (e.g. touching 2nd bead (idx 1) and pushing up makes value 2)
-    
-    // Intention B: Push DOWN (Deactivate)
-    // Target value becomes index (e.g. touching 2nd bead (idx 1) and pushing down makes value 1)
-
     const targetValueUp = index + 1;
     const targetValueDown = index;
 
     if (deltaY < -DRAG_THRESHOLD) {
       // Dragging UP -> Set Value to targetValueUp
-      onUpdate(prev => {
+      updateWithSound(prev => {
         const heaven = prev >= 5 ? 5 : 0;
         return heaven + targetValueUp;
       });
     } else if (deltaY > DRAG_THRESHOLD) {
       // Dragging DOWN -> Set Value to targetValueDown
-      onUpdate(prev => {
+      updateWithSound(prev => {
         const heaven = prev >= 5 ? 5 : 0;
         return heaven + targetValueDown;
       });
     } else {
-      // Inside Deadzone: Revert to whatever it was at start of drag
-      // This prevents the "bounce" if you just wiggle your finger slightly
-      onUpdate(prev => {
+      // Inside Deadzone: Revert
+      updateWithSound(prev => {
         const heaven = prev >= 5 ? 5 : 0;
         return heaven + (earthDragRef.current?.initialValue ?? 0);
       });
@@ -174,27 +171,20 @@ const Rod: React.FC<{
     
     // Tap Logic
     if (deltaY < 5) {
-       onUpdate(prev => {
+       updateWithSound(prev => {
           const heaven = prev >= 5 ? 5 : 0;
           const currentEarth = prev % 5;
           let newEarth = currentEarth;
 
-          // Smart Tap:
-          // If tapping the exact bead that is the top of the stack -> Remove it.
-          // If tapping a bead that is currently inactive -> Add it (and ones above).
-          // If tapping a bead in the middle of active stack -> Set value to that bead index.
-          
           if (index < currentEarth) {
             // Tapping an active bead
             if (index === currentEarth - 1) {
-              // It's the bottom-most active bead, remove it
               newEarth = index;
             } else {
-               // It's in the middle of stack, remove beads below it
                newEarth = index + 1; 
             }
           } else {
-            // Tapping an inactive bead -> activate up to this point
+            // Tapping an inactive bead
             newEarth = index + 1;
           }
 
@@ -276,6 +266,7 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({ problem, showValue, 
 
   const reset = () => {
     setValues([0, 0, 0]);
+    audioService.play('click'); // Sound on reset
   };
 
   return (

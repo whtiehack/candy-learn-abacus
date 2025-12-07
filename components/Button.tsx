@@ -1,4 +1,5 @@
 import React from 'react';
+import { audioService } from '../services/audioService';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'neutral' | 'danger';
@@ -12,6 +13,7 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'md', 
   className = '', 
   icon,
+  onClick,
   ...props 
 }) => {
   
@@ -31,9 +33,18 @@ export const Button: React.FC<ButtonProps> = ({
     xl: "px-10 py-6 text-3xl w-full",
   };
 
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Play sound globally via service (service checks enabled state)
+    audioService.play('click');
+    if (onClick) {
+      onClick(e);
+    }
+  };
+
   return (
     <button 
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+      onClick={handleClick}
       {...props}
     >
       {icon && <span className="mr-2">{icon}</span>}

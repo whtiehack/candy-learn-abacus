@@ -6,6 +6,7 @@ import { generateProblem } from '../services/mathService';
 import { saveGameData, updateDailyRecord, getTodayRecord } from '../services/storageService';
 import { DIFFICULTY_REWARDS } from '../constants';
 import { ArrowLeft, XCircle, Calculator } from 'lucide-react';
+import { audioService } from '../services/audioService';
 
 interface GameViewProps {
   changeView: (view: ViewState) => void;
@@ -140,6 +141,8 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
   }, [gameData.settings, problem, isOverLimit]);
 
   const handleSuccess = () => {
+    audioService.play('success'); // Play success sound!
+
     const types: CelebrationType[] = ['confetti', 'candy-rain', 'rocket', 'magic'];
     const randomType = types[Math.floor(Math.random() * types.length)];
     setCelebrationType(randomType);

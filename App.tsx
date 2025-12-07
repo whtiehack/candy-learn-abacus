@@ -6,6 +6,7 @@ import { GameView } from './views/GameView';
 import { RewardsView } from './views/RewardsView';
 import { SettingsView } from './views/SettingsView';
 import { LevelSelectView } from './views/LevelSelectView';
+import { audioService } from './services/audioService';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.HOME);
@@ -16,6 +17,13 @@ const App: React.FC = () => {
     const data = loadGameData();
     setGameData(data);
   }, []);
+
+  // Sync audio settings whenever gameData changes
+  useEffect(() => {
+    if (gameData) {
+      audioService.setGlobalEnabled(gameData.settings.soundEnabled);
+    }
+  }, [gameData]);
 
   if (!gameData) return null; 
 
