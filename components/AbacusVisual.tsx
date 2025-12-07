@@ -18,9 +18,6 @@ const Bead: React.FC<{
   onPointerUp: (e: React.PointerEvent) => void;
 }> = ({ active, type, colorClass, onPointerDown, onPointerMove, onPointerUp }) => {
   
-  // Visual position calculation
-  // Heaven: Active = Down (closer to beam), Inactive = Up
-  // Earth: Active = Up (closer to beam), Inactive = Down
   const translateClass = type === 'heaven'
     ? (active ? 'translate-y-[20px] md:translate-y-[24px]' : 'translate-y-0') 
     : (active ? 'translate-y-[-20px] md:translate-y-[-24px]' : 'translate-y-0'); 
@@ -31,7 +28,7 @@ const Bead: React.FC<{
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      onPointerLeave={onPointerUp} // Optional: release if leaving bounds, but capture usually handles this
+      onPointerLeave={onPointerUp} 
       className={`
         relative 
         w-10 h-6 md:w-12 md:h-8 
@@ -52,144 +49,130 @@ const Bead: React.FC<{
 const Rod: React.FC<{
   label: string;
   value: number;
-  onChange: (newVal: number) => void;
-}> = ({ label, value, onChange }) => {
+  onUpdate: (updater: (prev: number) => number) => void;
+}> = ({ label, value, onUpdate }) => {
   const heavenActive = value >= 5;
   const earthCount = value % 5;
 
-  // Refs to track drag state independently for each bead/interaction
-  const dragStartRef = useRef<{ id: number, startY: number, activeAtStart: boolean, earthIndex?: number } | null>(null);
+  // Separate refs for Heaven and Earth to support simultaneous interaction (Pinch)
+  const heavenDragRef = useRef<{ id: number, startY: number } | null>(null);
+  const earthDragRef = useRef<{ id: number, startY: number } | null>(null);
 
   // --- Heaven Bead Logic ---
   const handleHeavenPointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    dragStartRef.current = {
+    heavenDragRef.current = {
       id: e.pointerId,
-      startY: e.clientY,
-      activeAtStart: heavenActive
+      startY: e.clientY
     };
   };
 
   const handleHeavenPointerMove = (e: React.PointerEvent) => {
-    if (!dragStartRef.current || dragStartRef.current.id !== e.pointerId) return;
+    if (!heavenDragRef.current || heavenDragRef.current.id !== e.pointerId) return;
     
-    const deltaY = e.clientY - dragStartRef.current.startY;
-    const threshold = 10; // Sensitivity px
+    const deltaY = e.clientY - heavenDragRef.current.startY;
+    const threshold = 10; 
 
-    // Dragging DOWN -> Activate (Value +5)
-    if (deltaY > threshold && !heavenActive) {
-      onChange(value + 5);
-      // Reset start to prevent oscillating if user keeps dragging back and forth rapidly without lifting
-      dragStartRef.current.startY = e.clientY; 
+    // Dragging DOWN -> Activate (+5)
+    if (deltaY > threshold) {
+      onUpdate(prev => (prev >= 5 ? prev : prev + 5));
+      heavenDragRef.current.startY = e.clientY; 
     }
-    // Dragging UP -> Deactivate (Value -5)
-    else if (deltaY < -threshold && heavenActive) {
-      onChange(value - 5);
-      dragStartRef.current.startY = e.clientY;
+    // Dragging UP -> Deactivate (-5)
+    else if (deltaY < -threshold) {
+      onUpdate(prev => (prev >= 5 ? prev - 5 : prev));
+      heavenDragRef.current.startY = e.clientY;
     }
   };
 
   const handleHeavenPointerUp = (e: React.PointerEvent) => {
-    if (!dragStartRef.current || dragStartRef.current.id !== e.pointerId) return;
+    if (!heavenDragRef.current || heavenDragRef.current.id !== e.pointerId) return;
     
-    // Check if it was a simple tap (no movement)
-    const deltaY = Math.abs(e.clientY - dragStartRef.current.startY);
+    const deltaY = Math.abs(e.clientY - heavenDragRef.current.startY);
     if (deltaY < 5) {
       // Toggle on tap
-      if (heavenActive) onChange(value - 5);
-      else onChange(value + 5);
+      onUpdate(prev => (prev >= 5 ? prev - 5 : prev + 5));
     }
     
-    dragStartRef.current = null;
+    heavenDragRef.current = null;
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
 
   // --- Earth Bead Logic ---
-  // index 0 = top visual earth bead (closest to beam), index 3 = bottom
   const handleEarthPointerDown = (e: React.PointerEvent, index: number) => {
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    dragStartRef.current = {
+    earthDragRef.current = {
       id: e.pointerId,
-      startY: e.clientY,
-      activeAtStart: index < earthCount,
-      earthIndex: index
+      startY: e.clientY
     };
   };
 
   const handleEarthPointerMove = (e: React.PointerEvent, index: number) => {
-    if (!dragStartRef.current || dragStartRef.current.id !== e.pointerId) return;
+    if (!earthDragRef.current || earthDragRef.current.id !== e.pointerId) return;
 
-    const deltaY = e.clientY - dragStartRef.current.startY;
+    const deltaY = e.clientY - earthDragRef.current.startY;
     const threshold = 10; 
 
     // Sliding UP -> Push beads UP (Activate)
-    // If I touch bead at 'index', and slide UP, I want at least 'index + 1' beads active.
     if (deltaY < -threshold) {
        const targetCount = index + 1;
-       // Only change if we are increasing value (pushing up)
-       // We keep the heaven value (value >= 5 ? 5 : 0) and add the new earth count
-       const base = value >= 5 ? 5 : 0;
-       if (earthCount < targetCount) {
-         onChange(base + targetCount);
-         dragStartRef.current.startY = e.clientY;
-       }
+       onUpdate(prev => {
+         const currentHeaven = prev >= 5 ? 5 : 0;
+         const currentEarth = prev % 5;
+         if (currentEarth < targetCount) {
+           return currentHeaven + targetCount;
+         }
+         return prev;
+       });
+       earthDragRef.current.startY = e.clientY;
     }
     // Sliding DOWN -> Push beads DOWN (Deactivate)
-    // If I touch bead at 'index' and slide DOWN, I want 'index' beads active (removing the one I touched and those below it?)
-    // Actually, usually you grab the top-most active bead to pull down.
-    // Logic: If I slide down on bead 'index', I want the count to become 'index'.
     else if (deltaY > threshold) {
        const targetCount = index;
-       const base = value >= 5 ? 5 : 0;
-       if (earthCount > targetCount) {
-         onChange(base + targetCount);
-         dragStartRef.current.startY = e.clientY;
-       }
+       onUpdate(prev => {
+         const currentHeaven = prev >= 5 ? 5 : 0;
+         const currentEarth = prev % 5;
+         if (currentEarth > targetCount) {
+           return currentHeaven + targetCount;
+         }
+         return prev;
+       });
+       earthDragRef.current.startY = e.clientY;
     }
   };
 
   const handleEarthPointerUp = (e: React.PointerEvent, index: number) => {
-    if (!dragStartRef.current || dragStartRef.current.id !== e.pointerId) return;
+    if (!earthDragRef.current || earthDragRef.current.id !== e.pointerId) return;
 
     // Tap Logic
-    const deltaY = Math.abs(e.clientY - dragStartRef.current.startY);
+    const deltaY = Math.abs(e.clientY - earthDragRef.current.startY);
     if (deltaY < 5) {
-       const base = value >= 5 ? 5 : 0;
-       // If tapping an inactive bead -> activate up to this one
-       if (index >= earthCount) {
-         onChange(base + index + 1);
-       } 
-       // If tapping an active bead
-       else {
-         // Standard behavior: tapping the bottom-most active bead deactivates it?
-         // Or tapping any active bead sets count to that bead's index?
-         // Let's implement: Tapping specific bead toggles state relative to stack.
-         
-         // If tapping the top-most inactive bead (earthCount), add 1.
-         // If tapping the bottom-most active bead (earthCount - 1), remove 1.
-         
-         if (index === earthCount) {
-            onChange(base + earthCount + 1);
-         } else if (index === earthCount - 1) {
-            onChange(base + earthCount - 1);
-         } else {
-            // Fallback: If clicking deep into active stack, cut stack there? 
-            // Let's keep it simple: Click moves stack to pointer
-            if (index < earthCount) {
-               // Deactivate beads below this one? No, usually drag down.
-               // Let's just make tap on active bead = deactivate stack down to here.
-               onChange(base + index); 
+       onUpdate(prev => {
+          const currentHeaven = prev >= 5 ? 5 : 0;
+          const currentEarth = prev % 5;
+          let newEarth = currentEarth;
+
+          if (index === currentEarth) {
+            newEarth = currentEarth + 1;
+          } else if (index === currentEarth - 1) {
+            newEarth = currentEarth - 1;
+          } else {
+            if (index < currentEarth) {
+               newEarth = index;
             } else {
-               onChange(base + index + 1);
+               newEarth = index + 1;
             }
-         }
-       }
+          }
+          // Clamp
+          newEarth = Math.max(0, Math.min(4, newEarth));
+          return currentHeaven + newEarth;
+       });
     }
 
-    dragStartRef.current = null;
+    earthDragRef.current = null;
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
@@ -245,22 +228,20 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({ problem, showValue, 
   // Reset when problem changes
   useEffect(() => {
     setValues([0, 0, 0]);
+    // Notify parent of reset (async safe)
     if (onChange) onChange(0);
-  }, [problem, onChange]);
+  }, [problem.id]); // Only reset if ID changes
 
-  const updateRod = (index: 0 | 1 | 2, val: number) => {
+  // Sync state to parent whenever values change
+  useEffect(() => {
+     const total = values[0] * 100 + values[1] * 10 + values[2];
+     if (onChange) onChange(total);
+  }, [values, onChange]);
+
+  const updateRod = (index: 0 | 1 | 2, updater: (prev: number) => number) => {
     setValues(prev => {
       const newValues = [...prev] as [number, number, number];
-      newValues[index] = val;
-      
-      // Calculate total inside the setter to ensure latest state usage
-      const total = newValues[0] * 100 + newValues[1] * 10 + newValues[2];
-      // Defer the onChange call slightly or call it directly. 
-      // Since onChange usually updates parent state which might re-render, 
-      // it's safer to call it outside the reducer, but here we need atomic updates.
-      // Calling it here is okay as long as parent doesn't force hard reset of this component props immediately.
-      if (onChange) onChange(total);
-      
+      newValues[index] = updater(newValues[index]);
       return newValues;
     });
   };
@@ -269,15 +250,14 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({ problem, showValue, 
 
   const reset = () => {
     setValues([0, 0, 0]);
-    if (onChange) onChange(0);
   };
 
   return (
     <div className="w-full flex flex-col items-center mb-2 md:mb-6">
       <div className="relative bg-white p-2 md:p-4 rounded-2xl md:rounded-3xl shadow-xl border-4 border-candy-mint flex items-end justify-center gap-1 md:gap-2 max-w-full touch-none">
-        <Rod label="百" value={values[0]} onChange={(v) => updateRod(0, v)} />
-        <Rod label="十" value={values[1]} onChange={(v) => updateRod(1, v)} />
-        <Rod label="个" value={values[2]} onChange={(v) => updateRod(2, v)} />
+        <Rod label="百" value={values[0]} onUpdate={(updater) => updateRod(0, updater)} />
+        <Rod label="十" value={values[1]} onUpdate={(updater) => updateRod(1, updater)} />
+        <Rod label="个" value={values[2]} onUpdate={(updater) => updateRod(2, updater)} />
         
         {/* Reset Button */}
         <button 
