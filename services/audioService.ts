@@ -11,7 +11,7 @@ const SOUND_SOURCES = {
   success: [
     'https://downsc.chinaz.net/Files/DownLoad/sound1/201702/8378.mp3',
     'https://downsc.chinaz.net/Files/DownLoad/sound1/202203/y684.mp3',
-    'https://downsc.chinaz.net/Files/DownLoad/sound1/202408/xm2990.mp3'
+    //'https://downsc.chinaz.net/Files/DownLoad/sound1/202408/xm2990.mp3' // 这个音效不好，暂时不用
   ],
   wrong: [
      'https://downsc.chinaz.net/Files/DownLoad/sound1/202203/15478.mp3'
@@ -57,7 +57,10 @@ class AudioService {
    */
   public play(type: SoundType) {
     if (!this.enabled || !this.initialized) return;
-
+    if(type == "click") {
+      // click 暂时不播放音效
+      return;
+    }
     const sounds = this.soundPool[type];
     if (sounds && sounds.length > 0) {
       // Pick a random sound from the pool (useful for 'success' variations)
