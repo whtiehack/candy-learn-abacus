@@ -51,9 +51,9 @@ const effectiveInputRotated = inputRotated ?? forceLandscape ?? false;
 - 坐标相关（getCoord）→ 使用 `effectiveInputRotated`
 
 ### 验证点
-- [ ] Props 类型定义正确
-- [ ] effectiveLayoutLandscape 和 effectiveInputRotated 计算正确
-- [ ] 所有原 forceLandscape 使用点已替换
+- [x] Props 类型定义正确
+- [x] effectiveLayoutLandscape 和 effectiveInputRotated 计算正确
+- [x] 所有原 forceLandscape 使用点已替换
 
 ---
 
@@ -136,10 +136,10 @@ const handleHeavenUp = (e: React.PointerEvent) => {
 5. **类似修改 Earth 相关处理器**
 
 ### 验证点
-- [ ] Map 正确初始化
-- [ ] 先到先得逻辑正确
-- [ ] 指针释放时正确清理 Map
-- [ ] 多指操作互不干扰
+- [x] Map 正确初始化
+- [x] 先到先得逻辑正确
+- [x] 指针释放时正确清理 Map
+- [x] 多指操作互不干扰
 
 ---
 
@@ -169,10 +169,10 @@ useEffect(() => {
 ```
 
 ### 验证点
-- [ ] resize 事件正确监听
-- [ ] orientationchange 事件正确监听
-- [ ] 事件触发时 Map 被清空
-- [ ] cleanup 正确移除监听器
+- [x] resize 事件正确监听
+- [x] orientationchange 事件正确监听
+- [x] 事件触发时 Map 被清空
+- [x] cleanup 正确移除监听器
 
 ---
 
@@ -224,10 +224,10 @@ const containerClass = isWideScreen
 ```
 
 ### 验证点
-- [ ] 宽屏检测逻辑正确
-- [ ] CSS 类名条件性应用
-- [ ] inputRotated 与旋转状态同步
-- [ ] layoutLandscape 始终为 true
+- [x] 宽屏检测逻辑正确
+- [x] CSS 类名条件性应用
+- [x] inputRotated 与旋转状态同步
+- [x] layoutLandscape 始终为 true
 
 ---
 
@@ -252,10 +252,10 @@ const containerClass = isWideScreen
 ```
 
 ### 验证点
-- [ ] 3档模式珠子滑动正常（使用 clientY）
-- [ ] 3档模式珠子点击正常
-- [ ] 数值计算正确
-- [ ] 无视觉布局变化
+- [x] 3档模式珠子滑动正常（使用 clientY）
+- [x] 3档模式珠子点击正常
+- [x] 数值计算正确
+- [x] 无视觉布局变化
 
 ---
 

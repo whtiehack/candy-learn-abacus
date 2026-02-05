@@ -9,7 +9,10 @@ interface AbacusVisualProps {
   onChange?: (value: number) => void;
   digitCount?: number;
   labels?: string[];
-  forceLandscape?: boolean; // If true, treats input coordinates as rotated 90deg
+  layoutLandscape?: boolean;
+  inputRotated?: boolean;
+  /** @deprecated Use layoutLandscape + inputRotated instead */
+  forceLandscape?: boolean;
 }
 
 // --- CONSTANTS FOR LAYOUT & PHYSICS ---
@@ -115,17 +118,27 @@ const Rod: React.FC<{
   onUpdate: (updater: (prev: number) => number) => void;
   isDesktop: boolean;
   isCompact: boolean;
-  forceLandscape: boolean;
-}> = ({ label, value, colIndex, styleIndex, onUpdate, isDesktop, isCompact, forceLandscape }) => {
+  layoutLandscape: boolean;
+  inputRotated: boolean;
+}> = ({ label, value, colIndex, styleIndex, onUpdate, isDesktop, isCompact, layoutLandscape, inputRotated }) => {
   const heavenActive = value >= 5;
   const earthCount = value % 5;
-  
-  const heavenDragRef = useRef<{ id: number, startVal: number, hasTriggered: boolean } | null>(null);
-  const earthDragRef = useRef<{ id: number, startVal: number, initialValue: number, hasTriggered: boolean } | null>(null);
+
+  interface DragState {
+    startVal: number;
+    hasTriggered: boolean;
+  }
+
+  interface EarthDragState extends DragState {
+    initialValue: number;
+  }
+
+  const heavenDragMap = useRef<Map<number, DragState>>(new Map());
+  const earthDragMap = useRef<Map<number, EarthDragState>>(new Map());
 
   // Helper to get the relevant axis coordinate based on rotation
   const getCoord = (e: React.PointerEvent) => {
-    return forceLandscape ? e.clientX : e.clientY;
+    return inputRotated ? e.clientX : e.clientY;
   };
 
   const updateWithSound = (updater: (prev: number) => number) => {
@@ -139,101 +152,120 @@ const Rod: React.FC<{
   // --- Heaven Logic ---
   const handleHeavenPointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
+    if (heavenDragMap.current.size > 0) return;
+
     e.currentTarget.setPointerCapture(e.pointerId);
-    heavenDragRef.current = { 
-      id: e.pointerId, 
-      startVal: getCoord(e), 
-      hasTriggered: false 
-    };
+    heavenDragMap.current.set(e.pointerId, {
+      startVal: getCoord(e),
+      hasTriggered: false
+    });
   };
 
   const handleHeavenMove = (e: React.PointerEvent) => {
-    if (!heavenDragRef.current || heavenDragRef.current.id !== e.pointerId || heavenDragRef.current.hasTriggered) return;
-    
+    const state = heavenDragMap.current.get(e.pointerId);
+    if (!state || state.hasTriggered) return;
+
     const currentVal = getCoord(e);
-    const delta = currentVal - heavenDragRef.current.startVal;
-    
-    // In forceLandscape (rotated 90deg CW):
+    const delta = currentVal - state.startVal;
+
+    // In inputRotated mode (rotated 90deg CW):
     // Visual Down = Screen Right (+X).
     // So positive delta is "Down" in both modes.
-    
-    // Drag Down (> Threshold) -> Activate
+
     if (!heavenActive && delta > DRAG_THRESHOLD) {
       updateWithSound(v => v >= 5 ? v : v + 5);
-      heavenDragRef.current.hasTriggered = true;
-    }
-    // Drag Up (< -Threshold) -> Deactivate
-    else if (heavenActive && delta < -DRAG_THRESHOLD) {
+      state.hasTriggered = true;
+    } else if (heavenActive && delta < -DRAG_THRESHOLD) {
       updateWithSound(v => v >= 5 ? v - 5 : v);
-      heavenDragRef.current.hasTriggered = true;
+      state.hasTriggered = true;
     }
   };
 
   const handleHeavenUp = (e: React.PointerEvent) => {
-    if (!heavenDragRef.current) return;
-    if (!heavenDragRef.current.hasTriggered && Math.abs(getCoord(e) - heavenDragRef.current.startVal) < DRAG_THRESHOLD) {
+    const state = heavenDragMap.current.get(e.pointerId);
+    if (!state) return;
+
+    if (!state.hasTriggered && Math.abs(getCoord(e) - state.startVal) < DRAG_THRESHOLD) {
       updateWithSound(v => v >= 5 ? v - 5 : v + 5);
     }
-    heavenDragRef.current = null;
+
+    heavenDragMap.current.delete(e.pointerId);
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
   // --- Earth Logic ---
   const handleEarthDown = (e: React.PointerEvent, index: number) => {
     e.preventDefault();
+    if (earthDragMap.current.size > 0) return;
+
     e.currentTarget.setPointerCapture(e.pointerId);
-    earthDragRef.current = { 
-      id: e.pointerId, 
-      startVal: getCoord(e), 
+    earthDragMap.current.set(e.pointerId, {
+      startVal: getCoord(e),
       initialValue: earthCount,
-      hasTriggered: false 
-    };
+      hasTriggered: false
+    });
   };
 
   const handleEarthMove = (e: React.PointerEvent, index: number) => {
-    if (!earthDragRef.current || earthDragRef.current.id !== e.pointerId || earthDragRef.current.hasTriggered) return;
-    
-    const delta = getCoord(e) - earthDragRef.current.startVal;
-    
-    if (delta < -DRAG_THRESHOLD) { // Up
-       const currentVal = earthDragRef.current.initialValue;
-       if (index >= currentVal) {
-          updateWithSound(prev => {
-             const h = prev >= 5 ? 5 : 0;
-             return h + (index + 1);
-          });
-          earthDragRef.current.hasTriggered = true;
-       }
-    } 
-    else if (delta > DRAG_THRESHOLD) { // Down
-       const currentVal = earthDragRef.current.initialValue;
-       if (index < currentVal) {
-          updateWithSound(prev => {
-             const h = prev >= 5 ? 5 : 0;
-             return h + index;
-          });
-          earthDragRef.current.hasTriggered = true;
-       }
+    const state = earthDragMap.current.get(e.pointerId);
+    if (!state || state.hasTriggered) return;
+
+    const delta = getCoord(e) - state.startVal;
+
+    if (delta < -DRAG_THRESHOLD) {
+      const currentVal = state.initialValue;
+      if (index >= currentVal) {
+        updateWithSound(prev => {
+          const h = prev >= 5 ? 5 : 0;
+          return h + (index + 1);
+        });
+        state.hasTriggered = true;
+      }
+    } else if (delta > DRAG_THRESHOLD) {
+      const currentVal = state.initialValue;
+      if (index < currentVal) {
+        updateWithSound(prev => {
+          const h = prev >= 5 ? 5 : 0;
+          return h + index;
+        });
+        state.hasTriggered = true;
+      }
     }
   };
 
   const handleEarthUp = (e: React.PointerEvent, index: number) => {
-    if (!earthDragRef.current) return;
-    
-    if (!earthDragRef.current.hasTriggered && Math.abs(getCoord(e) - earthDragRef.current.startVal) < DRAG_THRESHOLD) {
+    const state = earthDragMap.current.get(e.pointerId);
+    if (!state) return;
+
+    if (!state.hasTriggered && Math.abs(getCoord(e) - state.startVal) < DRAG_THRESHOLD) {
       updateWithSound(prev => {
-         const h = prev >= 5 ? 5 : 0;
-         const currentE = prev % 5;
-         if (index < currentE) {
-           return h + index; 
-         } else {
-           return h + (index + 1);
-         }
+        const h = prev >= 5 ? 5 : 0;
+        const currentE = prev % 5;
+        if (index < currentE) {
+          return h + index;
+        } else {
+          return h + (index + 1);
+        }
       });
     }
-    earthDragRef.current = null;
+    earthDragMap.current.delete(e.pointerId);
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
+
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      heavenDragMap.current.clear();
+      earthDragMap.current.clear();
+    };
+
+    window.addEventListener('resize', handleOrientationChange);
+    window.addEventListener('orientationchange', handleOrientationChange);
+
+    return () => {
+      window.removeEventListener('resize', handleOrientationChange);
+      window.removeEventListener('orientationchange', handleOrientationChange);
+    };
+  }, []);
 
   // Dimensions logic
   let beadH = isDesktop ? DESKTOP_BEAD_H : MOBILE_BEAD_H;
@@ -248,10 +280,10 @@ const Rod: React.FC<{
   const earthH = (beadH * 4) + gap;
   
   // Font sizes for labels
-  const labelClass = isDesktop ? 'text-lg' : (isCompact ? 'text-[10px]' : (forceLandscape ? 'text-sm' : 'text-sm'));
+  const labelClass = isDesktop ? 'text-lg' : (isCompact ? 'text-[10px]' : (layoutLandscape ? 'text-sm' : 'text-sm'));
 
   return (
-    <div className={`flex flex-col items-center relative z-10 ${forceLandscape ? '' : 'mx-0.5 md:mx-1'}`}>
+    <div className={`flex flex-col items-center relative z-10 ${layoutLandscape ? '' : 'mx-0.5 md:mx-1'}`}>
       <div className={`text-[#5D4037] font-black mb-1 opacity-70 ${labelClass}`}>{label}</div>
       
       <div className="relative flex flex-col items-center">
@@ -292,14 +324,19 @@ const Rod: React.FC<{
   );
 };
 
-export const AbacusVisual: React.FC<AbacusVisualProps> = ({ 
-  problem, 
-  showValue, 
-  onChange, 
-  digitCount = 3, 
+export const AbacusVisual: React.FC<AbacusVisualProps> = ({
+  problem,
+  showValue,
+  onChange,
+  digitCount = 3,
   labels = ['百', '十', '个'],
+  layoutLandscape,
+  inputRotated,
   forceLandscape = false
 }) => {
+  const effectiveLayoutLandscape = layoutLandscape ?? forceLandscape;
+  const effectiveInputRotated = inputRotated ?? forceLandscape;
+
   const [values, setValues] = useState<number[]>([]);
   const [isDesktop, setIsDesktop] = useState(false);
 
@@ -350,8 +387,8 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
   };
 
   // Determine layout mode
-  // Disable compact mode if we are in forceLandscape, so we get big nice beads
-  const isCompact = digitCount > 5 && !forceLandscape;
+  // Disable compact mode if we are in effectiveLayoutLandscape, so we get big nice beads
+  const isCompact = digitCount > 5 && !effectiveLayoutLandscape;
 
   // Geometry calculations for Beam
   let beadH = isDesktop ? DESKTOP_BEAD_H : MOBILE_BEAD_H;
@@ -364,12 +401,12 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
 
   const heavenH = beadH + gap;
   const paddingTop = 8; 
-  const labelH = isDesktop ? 32 : (isCompact ? 20 : (forceLandscape ? 26 : 24));
+  const labelH = isDesktop ? 32 : (isCompact ? 20 : (effectiveLayoutLandscape ? 26 : 24));
   const beamH = isDesktop ? 24 : 20;
   const beamTop = paddingTop + labelH + heavenH + (spacerH - beamH) / 2 - 3;
 
   return (
-    <div className={`flex flex-col items-center justify-center select-none touch-none ${forceLandscape ? 'w-full h-full' : 'w-full'}`}>
+    <div className={`flex flex-col items-center justify-center select-none touch-none ${effectiveLayoutLandscape ? 'w-full h-full' : 'w-full'}`}>
       
       {/* OUTER FRAME */}
       <div className={`
@@ -378,7 +415,7 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
         rounded-[20px] 
         shadow-xl
         border-4 border-[#6D4123]
-        ${forceLandscape ? 'flex w-full h-auto px-4 py-2 max-w-5xl mx-auto' : 'inline-block p-2 md:p-4'}
+        ${effectiveLayoutLandscape ? 'flex w-full h-auto px-4 py-2 max-w-5xl mx-auto' : 'inline-block p-2 md:p-4'}
         ${isCompact ? 'p-1 md:p-3' : ''}
       `}>
          <div className="absolute inset-0 rounded-[16px] opacity-30 pointer-events-none" 
@@ -387,8 +424,8 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
          {/* INNER CANVAS */}
          <div className={`
            bg-[#FFF8E1] rounded-[10px] pb-2 pt-2 border border-[#D7CCC8] shadow-inner relative flex 
-           ${forceLandscape ? 'w-full justify-between gap-1 md:gap-4 px-2 md:px-8' : 'justify-center'}
-           ${isCompact ? 'px-1 gap-0.5' : (forceLandscape ? '' : 'px-2 gap-1 md:gap-4')}
+           ${effectiveLayoutLandscape ? 'w-full justify-between gap-1 md:gap-4 px-2 md:px-8' : 'justify-center'}
+           ${isCompact ? 'px-1 gap-0.5' : (effectiveLayoutLandscape ? '' : 'px-2 gap-1 md:gap-4')}
          `}>
             
             {/* THE BEAM */}
@@ -403,16 +440,17 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
             </div>
 
             {values.map((val, idx) => (
-               <Rod 
+               <Rod
                  key={idx}
-                 label={labels[idx] || ''} 
-                 value={val} 
+                 label={labels[idx] || ''}
+                 value={val}
                  colIndex={idx}
-                 styleIndex={values.length - 1 - idx} // Reverse style index so Unit is always Yellow/0
-                 onUpdate={(u) => updateRod(idx, u)} 
+                 styleIndex={values.length - 1 - idx}
+                 onUpdate={(u) => updateRod(idx, u)}
                  isDesktop={isDesktop}
                  isCompact={isCompact}
-                 forceLandscape={forceLandscape}
+                 layoutLandscape={effectiveLayoutLandscape}
+                 inputRotated={effectiveInputRotated}
                />
             ))}
          
@@ -423,10 +461,10 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
           onClick={reset}
           className={`
             absolute bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white active:scale-95 transition-transform z-40
-            ${forceLandscape ? '-right-4 bottom-4 w-12 h-12' : '-top-3 -right-3 w-10 h-10'}
+            ${effectiveLayoutLandscape ? '-right-4 bottom-4 w-12 h-12' : '-top-3 -right-3 w-10 h-10'}
           `}
          >
-           <RotateCcw size={forceLandscape ? 24 : 18} />
+           <RotateCcw size={effectiveLayoutLandscape ? 24 : 18} />
          </button>
 
       </div>
