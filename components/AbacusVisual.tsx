@@ -463,7 +463,7 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
           onClick={reset}
           className={`
             absolute bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white active:scale-95 transition-transform z-40
-            ${effectiveLayoutLandscape ? '-right-4 top-4 w-12 h-12' : '-top-3 -right-3 w-10 h-10'}
+            ${effectiveLayoutLandscape ? '-right-4 -top-4 w-12 h-12' : '-top-3 -right-3 w-10 h-10'}
           `}
          >
            <RotateCcw size={effectiveLayoutLandscape ? 24 : 18} />
