@@ -26,7 +26,7 @@ const DESKTOP_BEAD_W = 70;
 const DESKTOP_GAP = 55;
 const DESKTOP_SPACER = 36;
 
-// Compact Mode (for 9 digits on smaller screens)
+// Compact Mode (for 9 digits on smaller screens in Portrait)
 const COMPACT_BEAD_W = 50; // Narrower beads
 const COMPACT_GAP = 38; // Tighter vertical gap
 
@@ -72,8 +72,6 @@ const Bead: React.FC<{
     ? (active ? gap : 0)
     : (active ? -gap : 0);
 
-  // Cycle colors if we go beyond defined styles, but mapping is reversed (index 0 is rightmost)
-  // We want specific colors for specific positions if possible, or just cycle visually nicely.
   const color = COLUMN_STYLES[styleIndex % COLUMN_STYLES.length];
 
   return (
@@ -248,10 +246,13 @@ const Rod: React.FC<{
 
   const heavenH = beadH + gap;
   const earthH = (beadH * 4) + gap;
+  
+  // Font sizes for labels
+  const labelClass = isDesktop ? 'text-lg' : (isCompact ? 'text-[10px]' : (forceLandscape ? 'text-sm' : 'text-sm'));
 
   return (
-    <div className="flex flex-col items-center relative z-10 mx-0.5 md:mx-1">
-      <div className={`text-[#5D4037] font-black mb-1 opacity-70 ${isCompact ? 'text-[10px]' : 'text-sm'} md:text-lg`}>{label}</div>
+    <div className={`flex flex-col items-center relative z-10 ${forceLandscape ? '' : 'mx-0.5 md:mx-1'}`}>
+      <div className={`text-[#5D4037] font-black mb-1 opacity-70 ${labelClass}`}>{label}</div>
       
       <div className="relative flex flex-col items-center">
          <div className="absolute top-0 bottom-2 w-1.5 md:w-2 bg-gradient-to-r from-gray-400 via-gray-200 to-gray-400 rounded-full z-0"></div>
@@ -302,7 +303,6 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
   const [values, setValues] = useState<number[]>([]);
   const [isDesktop, setIsDesktop] = useState(false);
 
-  // Initialize values array based on digitCount
   useEffect(() => {
     setValues(new Array(digitCount).fill(0));
   }, [digitCount]);
@@ -314,7 +314,6 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
     return () => window.removeEventListener('resize', checkDesktop);
   }, []);
 
-  // Reset when problem changes (if in game mode)
   useEffect(() => {
     if (problem) {
         setValues(new Array(digitCount).fill(0));
@@ -322,11 +321,8 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
     }
   }, [problem, digitCount]);
 
-  // Notify parent of total value change
   useEffect(() => {
      let total = 0;
-     // values[0] is Leftmost (Highest place)
-     // e.g. for 3 digits: val[0]*100 + val[1]*10 + val[2]*1
      for(let i = 0; i < values.length; i++) {
         const power = values.length - 1 - i;
         total += values[i] * Math.pow(10, power);
@@ -342,7 +338,6 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
     });
   };
 
-  // Format large numbers with commas
   const currentTotal = values.reduce((acc, val, idx) => {
       const power = values.length - 1 - idx;
       return acc + val * Math.pow(10, power);
@@ -355,7 +350,8 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
   };
 
   // Determine layout mode
-  const isCompact = digitCount > 5;
+  // Disable compact mode if we are in forceLandscape, so we get big nice beads
+  const isCompact = digitCount > 5 && !forceLandscape;
 
   // Geometry calculations for Beam
   let beadH = isDesktop ? DESKTOP_BEAD_H : MOBILE_BEAD_H;
@@ -368,29 +364,31 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
 
   const heavenH = beadH + gap;
   const paddingTop = 8; 
-  const labelH = isDesktop ? 32 : (isCompact ? 20 : 24);
+  const labelH = isDesktop ? 32 : (isCompact ? 20 : (forceLandscape ? 26 : 24));
   const beamH = isDesktop ? 24 : 20;
   const beamTop = paddingTop + labelH + heavenH + (spacerH - beamH) / 2 - 3;
 
   return (
-    <div className="flex flex-col items-center justify-center select-none touch-none w-full">
+    <div className={`flex flex-col items-center justify-center select-none touch-none ${forceLandscape ? 'w-full h-full' : 'w-full'}`}>
       
       {/* OUTER FRAME */}
       <div className={`
-        relative inline-block
+        relative 
         bg-[#8B5A2B] 
         rounded-[20px] 
         shadow-xl
         border-4 border-[#6D4123]
-        ${isCompact ? 'p-1 md:p-3' : 'p-2 md:p-4'}
+        ${forceLandscape ? 'flex w-full h-auto px-4 py-2 max-w-5xl mx-auto' : 'inline-block p-2 md:p-4'}
+        ${isCompact ? 'p-1 md:p-3' : ''}
       `}>
          <div className="absolute inset-0 rounded-[16px] opacity-30 pointer-events-none" 
               style={{ backgroundImage: 'repeating-linear-gradient(45deg, #000000 0, #000000 1px, transparent 1px, transparent 10px)' }}></div>
 
          {/* INNER CANVAS */}
          <div className={`
-           bg-[#FFF8E1] rounded-[10px] pb-2 pt-2 border border-[#D7CCC8] shadow-inner relative flex justify-center
-           ${isCompact ? 'px-1 gap-0.5' : 'px-2 gap-1 md:gap-4'}
+           bg-[#FFF8E1] rounded-[10px] pb-2 pt-2 border border-[#D7CCC8] shadow-inner relative flex 
+           ${forceLandscape ? 'w-full justify-between gap-1 md:gap-4 px-2 md:px-8' : 'justify-center'}
+           ${isCompact ? 'px-1 gap-0.5' : (forceLandscape ? '' : 'px-2 gap-1 md:gap-4')}
          `}>
             
             {/* THE BEAM */}
@@ -423,14 +421,19 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
          {/* Reset Button */}
          <button 
           onClick={reset}
-          className="absolute -top-3 -right-3 w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white active:scale-95 transition-transform z-40"
+          className={`
+            absolute bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white active:scale-95 transition-transform z-40
+            ${forceLandscape ? '-right-4 bottom-4 w-12 h-12' : '-top-3 -right-3 w-10 h-10'}
+          `}
          >
-           <RotateCcw size={18} />
+           <RotateCcw size={forceLandscape ? 24 : 18} />
          </button>
 
       </div>
 
-      {/* Value Display */}
+      {/* Value Display - Only shown if not forceLandscape or if explicitly asked. 
+          In forceLandscape, parent handles it usually. But if prop is true, we show it.
+      */}
       {showValue && (
         <div className="mt-4 bg-white/90 px-6 py-2 rounded-full shadow-sm text-2xl font-black text-candy-text border border-candy-pink min-w-[120px] text-center">
           {formattedTotal}
