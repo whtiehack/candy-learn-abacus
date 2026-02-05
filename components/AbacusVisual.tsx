@@ -137,8 +137,10 @@ const Rod: React.FC<{
   const earthDragMap = useRef<Map<number, EarthDragState>>(new Map());
 
   // Helper to get the relevant axis coordinate based on rotation
+  // When CSS rotate(90deg) is applied, visual "down" = screen "left" (-X)
+  // Negate X so that visual down = positive delta
   const getCoord = (e: React.PointerEvent) => {
-    return inputRotated ? e.clientX : e.clientY;
+    return inputRotated ? -e.clientX : e.clientY;
   };
 
   const updateWithSound = (updater: (prev: number) => number) => {
