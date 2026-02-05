@@ -3,7 +3,8 @@ export enum ViewState {
   LEVEL_SELECT = 'LEVEL_SELECT',
   GAME = 'GAME',
   REWARDS = 'REWARDS',
-  SETTINGS = 'SETTINGS'
+  SETTINGS = 'SETTINGS',
+  FREE_MODE = 'FREE_MODE'
 }
 
 export type Difficulty = 'digit1_upto10' | 'digit1_upto20' | 'digit2' | 'chain3' | 'chain4';

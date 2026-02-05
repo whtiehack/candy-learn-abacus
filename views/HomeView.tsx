@@ -1,7 +1,7 @@
 import React from 'react';
 import { ViewState } from '../types';
 import { Button } from '../components/Button';
-import { Play, Settings, Trophy } from 'lucide-react';
+import { Play, Settings, Trophy, Palette } from 'lucide-react';
 
 interface HomeViewProps {
   changeView: (view: ViewState) => void;
@@ -44,6 +44,16 @@ export const HomeView: React.FC<HomeViewProps> = ({ changeView, candies }) => {
           开始游戏
         </Button>
         
+        <Button 
+          variant="secondary" // Reusing secondary style but maybe we can customize color via className
+          size="lg" 
+          onClick={() => changeView(ViewState.FREE_MODE)}
+          icon={<Palette />}
+          className="w-full bg-cyan-200 hover:bg-cyan-300 border-cyan-400 text-cyan-900"
+        >
+          自由练习 (9档)
+        </Button>
+
         <Button 
           variant="secondary" 
           size="lg" 

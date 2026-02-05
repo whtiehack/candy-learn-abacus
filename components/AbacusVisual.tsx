@@ -4,43 +4,45 @@ import { RotateCcw } from 'lucide-react';
 import { audioService } from '../services/audioService';
 
 interface AbacusVisualProps {
-  problem: MathProblem;
+  problem?: MathProblem;
   showValue: boolean;
   onChange?: (value: number) => void;
+  digitCount?: number;
+  labels?: string[];
+  forceLandscape?: boolean; // If true, treats input coordinates as rotated 90deg
 }
 
 // --- CONSTANTS FOR LAYOUT & PHYSICS ---
-// Adjusted dimensions based on feedback:
-// 1. Reduced Bead Height (36 -> 32) to look less "long/tall".
-// 2. Reduced Gap (60 -> 42) to tighten the vertical space.
-// 3. Restored Labels.
 
+// Standard Mobile (Portrait)
 const MOBILE_BEAD_H = 32;
 const MOBILE_BEAD_W = 60;
 const MOBILE_GAP = 42; 
 const MOBILE_SPACER = 28; 
 
-const DESKTOP_BEAD_H = 44;
-const DESKTOP_BEAD_W = 80;
-const DESKTOP_GAP = 60;
+// Desktop / Landscape Large
+const DESKTOP_BEAD_H = 40;
+const DESKTOP_BEAD_W = 70;
+const DESKTOP_GAP = 55;
 const DESKTOP_SPACER = 36;
 
-const DRAG_THRESHOLD = 8; // Increased slightly to prevent accidental triggers during taps
+// Compact Mode (for 9 digits on smaller screens)
+const COMPACT_BEAD_W = 50; // Narrower beads
+const COMPACT_GAP = 38; // Tighter vertical gap
 
-// High Contrast, "Toy-Like" Colors
+const DRAG_THRESHOLD = 8;
+
+// High Contrast, "Toy-Like" Colors - Extended for 9 columns
 const COLUMN_STYLES = [
-  { // Hundreds - Blue
-    bg: "linear-gradient(180deg, #22d3ee 0%, #0891b2 100%)",
-    shadow: "#155e75"
-  },
-  { // Tens - Pink
-    bg: "linear-gradient(180deg, #f472b6 0%, #db2777 100%)",
-    shadow: "#be185d"
-  },
-  { // Units - Yellow
-    bg: "linear-gradient(180deg, #facc15 0%, #ca8a04 100%)",
-    shadow: "#a16207"
-  }
+  { bg: "linear-gradient(180deg, #facc15 0%, #ca8a04 100%)", shadow: "#a16207" }, // Units (Yellow)
+  { bg: "linear-gradient(180deg, #f472b6 0%, #db2777 100%)", shadow: "#be185d" }, // Tens (Pink)
+  { bg: "linear-gradient(180deg, #22d3ee 0%, #0891b2 100%)", shadow: "#155e75" }, // Hundreds (Blue)
+  { bg: "linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%)", shadow: "#5b21b6" }, // Thousands (Purple)
+  { bg: "linear-gradient(180deg, #4ade80 0%, #16a34a 100%)", shadow: "#14532d" }, // 10k (Green)
+  { bg: "linear-gradient(180deg, #fb923c 0%, #ea580c 100%)", shadow: "#9a3412" }, // 100k (Orange)
+  { bg: "linear-gradient(180deg, #f43f5e 0%, #e11d48 100%)", shadow: "#9f1239" }, // Mill (Red)
+  { bg: "linear-gradient(180deg, #94a3b8 0%, #475569 100%)", shadow: "#1e293b" }, // 10m (Slate)
+  { bg: "linear-gradient(180deg, #e879f9 0%, #c026d3 100%)", shadow: "#701a75" }, // 100m (Fuchsia)
 ];
 
 // --- COMPONENTS ---
@@ -48,25 +50,31 @@ const COLUMN_STYLES = [
 const Bead: React.FC<{ 
   active: boolean; 
   type: 'heaven' | 'earth';
-  styleIndex: number;
+  styleIndex: number; // 0 is Units, 1 is Tens, etc.
   onPointerDown: (e: React.PointerEvent) => void;
   onPointerMove: (e: React.PointerEvent) => void;
   onPointerUp: (e: React.PointerEvent) => void;
   isDesktop: boolean;
-}> = ({ active, type, styleIndex, onPointerDown, onPointerMove, onPointerUp, isDesktop }) => {
+  isCompact: boolean;
+}> = ({ active, type, styleIndex, onPointerDown, onPointerMove, onPointerUp, isDesktop, isCompact }) => {
   
-  const h = isDesktop ? DESKTOP_BEAD_H : MOBILE_BEAD_H;
-  const w = isDesktop ? DESKTOP_BEAD_W : MOBILE_BEAD_W;
-  const gap = isDesktop ? DESKTOP_GAP : MOBILE_GAP;
+  let h = isDesktop ? DESKTOP_BEAD_H : MOBILE_BEAD_H;
+  let w = isDesktop ? DESKTOP_BEAD_W : MOBILE_BEAD_W;
+  let gap = isDesktop ? DESKTOP_GAP : MOBILE_GAP;
+
+  if (isCompact) {
+    w = COMPACT_BEAD_W;
+    gap = COMPACT_GAP;
+  }
 
   // Translation Logic
-  // Heaven: Inactive (0) -> Active (Move DOWN by gap)
-  // Earth: Inactive (0) -> Active (Move UP by gap)
   const translateY = type === 'heaven'
     ? (active ? gap : 0)
     : (active ? -gap : 0);
 
-  const color = COLUMN_STYLES[styleIndex % 3];
+  // Cycle colors if we go beyond defined styles, but mapping is reversed (index 0 is rightmost)
+  // We want specific colors for specific positions if possible, or just cycle visually nicely.
+  const color = COLUMN_STYLES[styleIndex % COLUMN_STYLES.length];
 
   return (
     <div 
@@ -80,10 +88,9 @@ const Bead: React.FC<{
         width: w,
         height: h,
         transform: `translateY(${translateY}px)`,
-        touchAction: 'none' // Critical for handling drags on mobile
+        touchAction: 'none'
       }}
     >
-      {/* Bead Visual - Solid Opaque Colors */}
       <div 
         className="w-full h-full rounded-[8px] md:rounded-[12px] relative overflow-hidden pointer-events-none"
         style={{
@@ -95,9 +102,7 @@ const Bead: React.FC<{
           `
         }}
       >
-         {/* Highlight */}
          <div className="absolute top-1 left-2 right-2 h-[30%] bg-gradient-to-b from-white/60 to-transparent rounded-t-[6px]"></div>
-         {/* Center Hole Indication */}
          <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-black/10 -translate-y-1/2"></div>
       </div>
     </div>
@@ -107,16 +112,23 @@ const Bead: React.FC<{
 const Rod: React.FC<{
   label: string;
   value: number;
-  colIndex: number;
+  colIndex: number; // 0 = Leftmost visually
+  styleIndex: number; // 0 = Units (Rightmost)
   onUpdate: (updater: (prev: number) => number) => void;
   isDesktop: boolean;
-}> = ({ label, value, colIndex, onUpdate, isDesktop }) => {
+  isCompact: boolean;
+  forceLandscape: boolean;
+}> = ({ label, value, colIndex, styleIndex, onUpdate, isDesktop, isCompact, forceLandscape }) => {
   const heavenActive = value >= 5;
   const earthCount = value % 5;
   
-  // Ref includes 'hasTriggered' to lock the move action during a single swipe gesture
-  const heavenDragRef = useRef<{ id: number, startY: number, initialActive: boolean, hasTriggered: boolean } | null>(null);
-  const earthDragRef = useRef<{ id: number, startY: number, initialValue: number, hasTriggered: boolean } | null>(null);
+  const heavenDragRef = useRef<{ id: number, startVal: number, hasTriggered: boolean } | null>(null);
+  const earthDragRef = useRef<{ id: number, startVal: number, initialValue: number, hasTriggered: boolean } | null>(null);
+
+  // Helper to get the relevant axis coordinate based on rotation
+  const getCoord = (e: React.PointerEvent) => {
+    return forceLandscape ? e.clientX : e.clientY;
+  };
 
   const updateWithSound = (updater: (prev: number) => number) => {
     onUpdate(prev => {
@@ -132,8 +144,7 @@ const Rod: React.FC<{
     e.currentTarget.setPointerCapture(e.pointerId);
     heavenDragRef.current = { 
       id: e.pointerId, 
-      startY: e.clientY, 
-      initialActive: heavenActive,
+      startVal: getCoord(e), 
       hasTriggered: false 
     };
   };
@@ -141,15 +152,20 @@ const Rod: React.FC<{
   const handleHeavenMove = (e: React.PointerEvent) => {
     if (!heavenDragRef.current || heavenDragRef.current.id !== e.pointerId || heavenDragRef.current.hasTriggered) return;
     
-    const delta = e.clientY - heavenDragRef.current.startY;
+    const currentVal = getCoord(e);
+    const delta = currentVal - heavenDragRef.current.startVal;
     
-    // Logic: Drag Down (> Threshold) -> Activate
-    if (!heavenDragRef.current.initialActive && delta > DRAG_THRESHOLD) {
+    // In forceLandscape (rotated 90deg CW):
+    // Visual Down = Screen Right (+X).
+    // So positive delta is "Down" in both modes.
+    
+    // Drag Down (> Threshold) -> Activate
+    if (!heavenActive && delta > DRAG_THRESHOLD) {
       updateWithSound(v => v >= 5 ? v : v + 5);
       heavenDragRef.current.hasTriggered = true;
     }
-    // Logic: Drag Up (< -Threshold) -> Deactivate
-    else if (heavenDragRef.current.initialActive && delta < -DRAG_THRESHOLD) {
+    // Drag Up (< -Threshold) -> Deactivate
+    else if (heavenActive && delta < -DRAG_THRESHOLD) {
       updateWithSound(v => v >= 5 ? v - 5 : v);
       heavenDragRef.current.hasTriggered = true;
     }
@@ -157,12 +173,9 @@ const Rod: React.FC<{
 
   const handleHeavenUp = (e: React.PointerEvent) => {
     if (!heavenDragRef.current) return;
-    
-    // If we haven't triggered a drag move, treat it as a tap
-    if (!heavenDragRef.current.hasTriggered && Math.abs(e.clientY - heavenDragRef.current.startY) < DRAG_THRESHOLD) {
+    if (!heavenDragRef.current.hasTriggered && Math.abs(getCoord(e) - heavenDragRef.current.startVal) < DRAG_THRESHOLD) {
       updateWithSound(v => v >= 5 ? v - 5 : v + 5);
     }
-    
     heavenDragRef.current = null;
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
@@ -173,7 +186,7 @@ const Rod: React.FC<{
     e.currentTarget.setPointerCapture(e.pointerId);
     earthDragRef.current = { 
       id: e.pointerId, 
-      startY: e.clientY, 
+      startVal: getCoord(e), 
       initialValue: earthCount,
       hasTriggered: false 
     };
@@ -182,13 +195,10 @@ const Rod: React.FC<{
   const handleEarthMove = (e: React.PointerEvent, index: number) => {
     if (!earthDragRef.current || earthDragRef.current.id !== e.pointerId || earthDragRef.current.hasTriggered) return;
     
-    const delta = e.clientY - earthDragRef.current.startY;
+    const delta = getCoord(e) - earthDragRef.current.startVal;
     
-    // Drag Up (Negative Y) -> Add
-    // E.g. Dragging 2nd bead (index 1) up should result in value 2
-    if (delta < -DRAG_THRESHOLD) {
+    if (delta < -DRAG_THRESHOLD) { // Up
        const currentVal = earthDragRef.current.initialValue;
-       // If the bead I grabbed is below the beam (inactive), activate up to this bead
        if (index >= currentVal) {
           updateWithSound(prev => {
              const h = prev >= 5 ? 5 : 0;
@@ -197,10 +207,8 @@ const Rod: React.FC<{
           earthDragRef.current.hasTriggered = true;
        }
     } 
-    // Drag Down (Positive Y) -> Subtract
-    else if (delta > DRAG_THRESHOLD) {
+    else if (delta > DRAG_THRESHOLD) { // Down
        const currentVal = earthDragRef.current.initialValue;
-       // If the bead I grabbed is at the beam (active), deactivate this and ones below it
        if (index < currentVal) {
           updateWithSound(prev => {
              const h = prev >= 5 ? 5 : 0;
@@ -214,22 +222,13 @@ const Rod: React.FC<{
   const handleEarthUp = (e: React.PointerEvent, index: number) => {
     if (!earthDragRef.current) return;
     
-    // Tap Logic
-    if (!earthDragRef.current.hasTriggered && Math.abs(e.clientY - earthDragRef.current.startY) < DRAG_THRESHOLD) {
+    if (!earthDragRef.current.hasTriggered && Math.abs(getCoord(e) - earthDragRef.current.startVal) < DRAG_THRESHOLD) {
       updateWithSound(prev => {
          const h = prev >= 5 ? 5 : 0;
          const currentE = prev % 5;
-         
-         // If clicking a bead that is already active (top of stack), deactivate it
          if (index < currentE) {
-           // Special case: If I click the 3rd active bead, I probably want to set value to 2
-           // But if I click the 1st active bead when 3 are active, do I set to 0?
-           // Standard behavior: Toggle the specific bead's active state relative to stack.
-           // If I click the bottom-most active bead (index == currentE - 1), remove it.
-           // If I click a bead in middle of active stack, set value to that index.
            return h + index; 
          } else {
-           // Clicking an inactive bead: Activate up to here
            return h + (index + 1);
          }
       });
@@ -238,66 +237,75 @@ const Rod: React.FC<{
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
-  // Dimensions
-  const beadH = isDesktop ? DESKTOP_BEAD_H : MOBILE_BEAD_H;
-  const gap = isDesktop ? DESKTOP_GAP : MOBILE_GAP;
-  const spacerH = isDesktop ? DESKTOP_SPACER : MOBILE_SPACER;
+  // Dimensions logic
+  let beadH = isDesktop ? DESKTOP_BEAD_H : MOBILE_BEAD_H;
+  let gap = isDesktop ? DESKTOP_GAP : MOBILE_GAP;
+  let spacerH = isDesktop ? DESKTOP_SPACER : MOBILE_SPACER;
+
+  if (isCompact) {
+    gap = COMPACT_GAP;
+  }
 
   const heavenH = beadH + gap;
   const earthH = (beadH * 4) + gap;
 
   return (
-    <div className="flex flex-col items-center relative z-10 mx-1 md:mx-2">
-      {/* Label Restored */}
-      <div className="text-[#5D4037] font-black mb-1 opacity-70 text-sm md:text-lg">{label}</div>
+    <div className="flex flex-col items-center relative z-10 mx-0.5 md:mx-1">
+      <div className={`text-[#5D4037] font-black mb-1 opacity-70 ${isCompact ? 'text-[10px]' : 'text-sm'} md:text-lg`}>{label}</div>
       
-      {/* ROD CONTAINER */}
       <div className="relative flex flex-col items-center">
-         
-         {/* Vertical Metal Rod (Z-0: Behind Beads) */}
-         {/* Adjusted top to align with label bottom roughly */}
          <div className="absolute top-0 bottom-2 w-1.5 md:w-2 bg-gradient-to-r from-gray-400 via-gray-200 to-gray-400 rounded-full z-0"></div>
 
-         {/* HEAVEN DECK (Z-10) */}
          <div style={{ height: heavenH }} className="w-full relative z-10 flex justify-center items-start pt-0">
             <Bead 
               active={heavenActive} 
               type="heaven" 
-              styleIndex={colIndex} 
+              styleIndex={styleIndex} 
               isDesktop={isDesktop}
+              isCompact={isCompact}
               onPointerDown={handleHeavenPointerDown}
               onPointerMove={handleHeavenMove}
               onPointerUp={handleHeavenUp}
             />
          </div>
 
-         {/* SPACER FOR BEAM */}
          <div style={{ height: spacerH }} className="w-full z-0"></div>
 
-         {/* EARTH DECK (Z-10) */}
          <div style={{ height: earthH }} className="w-full relative z-10 flex flex-col justify-end items-center gap-0">
             {[0, 1, 2, 3].map(i => (
               <Bead 
                 key={i}
                 active={i < earthCount}
                 type="earth"
-                styleIndex={colIndex}
+                styleIndex={styleIndex}
                 isDesktop={isDesktop}
+                isCompact={isCompact}
                 onPointerDown={(e) => handleEarthDown(e, i)}
                 onPointerMove={(e) => handleEarthMove(e, i)}
                 onPointerUp={(e) => handleEarthUp(e, i)}
               />
             ))}
          </div>
-
       </div>
     </div>
   );
 };
 
-export const AbacusVisual: React.FC<AbacusVisualProps> = ({ problem, showValue, onChange }) => {
-  const [values, setValues] = useState<[number, number, number]>([0, 0, 0]);
+export const AbacusVisual: React.FC<AbacusVisualProps> = ({ 
+  problem, 
+  showValue, 
+  onChange, 
+  digitCount = 3, 
+  labels = ['百', '十', '个'],
+  forceLandscape = false
+}) => {
+  const [values, setValues] = useState<number[]>([]);
   const [isDesktop, setIsDesktop] = useState(false);
+
+  // Initialize values array based on digitCount
+  useEffect(() => {
+    setValues(new Array(digitCount).fill(0));
+  }, [digitCount]);
 
   useEffect(() => {
     const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
@@ -306,87 +314,109 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({ problem, showValue, 
     return () => window.removeEventListener('resize', checkDesktop);
   }, []);
 
+  // Reset when problem changes (if in game mode)
   useEffect(() => {
-    setValues([0, 0, 0]);
-    if (onChange) onChange(0);
-  }, [problem.id]);
+    if (problem) {
+        setValues(new Array(digitCount).fill(0));
+        if (onChange) onChange(0);
+    }
+  }, [problem, digitCount]);
 
+  // Notify parent of total value change
   useEffect(() => {
-     const total = values[0] * 100 + values[1] * 10 + values[2];
+     let total = 0;
+     // values[0] is Leftmost (Highest place)
+     // e.g. for 3 digits: val[0]*100 + val[1]*10 + val[2]*1
+     for(let i = 0; i < values.length; i++) {
+        const power = values.length - 1 - i;
+        total += values[i] * Math.pow(10, power);
+     }
      if (onChange) onChange(total);
   }, [values, onChange]);
 
-  const updateRod = (index: 0 | 1 | 2, updater: (prev: number) => number) => {
+  const updateRod = (index: number, updater: (prev: number) => number) => {
     setValues(prev => {
-      const newValues = [...prev] as [number, number, number];
+      const newValues = [...prev];
       newValues[index] = updater(newValues[index]);
       return newValues;
     });
   };
 
-  const currentTotal = values[0] * 100 + values[1] * 10 + values[2];
-  const reset = () => { setValues([0, 0, 0]); audioService.play('click'); };
+  // Format large numbers with commas
+  const currentTotal = values.reduce((acc, val, idx) => {
+      const power = values.length - 1 - idx;
+      return acc + val * Math.pow(10, power);
+  }, 0);
+  const formattedTotal = currentTotal.toLocaleString();
 
-  // --- BEAM POSITION CALCULATION ---
-  const beadH = isDesktop ? DESKTOP_BEAD_H : MOBILE_BEAD_H;
-  const gap = isDesktop ? DESKTOP_GAP : MOBILE_GAP;
-  const spacerH = isDesktop ? DESKTOP_SPACER : MOBILE_SPACER;
+  const reset = () => { 
+    setValues(new Array(digitCount).fill(0)); 
+    audioService.play('click'); 
+  };
+
+  // Determine layout mode
+  const isCompact = digitCount > 5;
+
+  // Geometry calculations for Beam
+  let beadH = isDesktop ? DESKTOP_BEAD_H : MOBILE_BEAD_H;
+  let gap = isDesktop ? DESKTOP_GAP : MOBILE_GAP;
+  let spacerH = isDesktop ? DESKTOP_SPACER : MOBILE_SPACER;
   
-  // Height of Heaven Deck including travel gap
+  if (isCompact) {
+      gap = COMPACT_GAP;
+  }
+
   const heavenH = beadH + gap;
-  
-  // Container Padding Top (pt-2 = 8px)
   const paddingTop = 8; 
-
-  // Label Height + Margin:
-  // Mobile: text-sm (line-height 20px) + mb-1 (4px) = 24px
-  // Desktop: text-lg (line-height 28px) + mb-1 (4px) = 32px
-  const labelH = isDesktop ? 32 : 24;
-  
-  // Beam Height
+  const labelH = isDesktop ? 32 : (isCompact ? 20 : 24);
   const beamH = isDesktop ? 24 : 20;
-
-  // Beam should be vertically centered within the spacer area
-  // Top = PaddingTop + LabelHeight + HeavenHeight + (SpacerHeight - BeamHeight) / 2
-  // Manual tweak: -3px to move beam up slightly as requested
   const beamTop = paddingTop + labelH + heavenH + (spacerH - beamH) / 2 - 3;
 
   return (
     <div className="flex flex-col items-center justify-center select-none touch-none w-full">
       
       {/* OUTER FRAME */}
-      <div className="
+      <div className={`
         relative inline-block
         bg-[#8B5A2B] 
-        p-2 md:p-4 rounded-[20px] 
+        rounded-[20px] 
         shadow-xl
         border-4 border-[#6D4123]
-      ">
-         {/* Wood Texture CSS */}
+        ${isCompact ? 'p-1 md:p-3' : 'p-2 md:p-4'}
+      `}>
          <div className="absolute inset-0 rounded-[16px] opacity-30 pointer-events-none" 
               style={{ backgroundImage: 'repeating-linear-gradient(45deg, #000000 0, #000000 1px, transparent 1px, transparent 10px)' }}></div>
 
          {/* INNER CANVAS */}
-         {/* Revert to pt-2 to allow labels to fit naturally without extra padding */}
-         <div className="bg-[#FFF8E1] rounded-[10px] px-2 pb-2 pt-2 border border-[#D7CCC8] shadow-inner relative flex justify-center gap-1 md:gap-4">
+         <div className={`
+           bg-[#FFF8E1] rounded-[10px] pb-2 pt-2 border border-[#D7CCC8] shadow-inner relative flex justify-center
+           ${isCompact ? 'px-1 gap-0.5' : 'px-2 gap-1 md:gap-4'}
+         `}>
             
-            {/* THE BEAM (Z-30: On top of beads) */}
+            {/* THE BEAM */}
             <div 
                className="absolute left-0 right-0 bg-[#5D4037] z-30 shadow-md flex items-center justify-around border-y border-[#3E2723]"
-               style={{ 
-                 top: beamTop, 
-                 height: beamH
-               }}
+               style={{ top: beamTop, height: beamH }}
             >
-               {/* Beam Dots */}
-               <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
-               <div className="w-2 h-2 bg-white/80 rounded-full"></div>
-               <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
+               {/* Decorative dots on beam */}
+               {Array.from({length: Math.ceil(digitCount/3) + 1}).map((_, i) => (
+                   <div key={i} className="w-1.5 h-1.5 bg-white/50 rounded-full mx-4"></div>
+               ))}
             </div>
 
-            <Rod label="百" value={values[0]} colIndex={0} onUpdate={(u) => updateRod(0, u)} isDesktop={isDesktop} />
-            <Rod label="十" value={values[1]} colIndex={1} onUpdate={(u) => updateRod(1, u)} isDesktop={isDesktop} />
-            <Rod label="个" value={values[2]} colIndex={2} onUpdate={(u) => updateRod(2, u)} isDesktop={isDesktop} />
+            {values.map((val, idx) => (
+               <Rod 
+                 key={idx}
+                 label={labels[idx] || ''} 
+                 value={val} 
+                 colIndex={idx}
+                 styleIndex={values.length - 1 - idx} // Reverse style index so Unit is always Yellow/0
+                 onUpdate={(u) => updateRod(idx, u)} 
+                 isDesktop={isDesktop}
+                 isCompact={isCompact}
+                 forceLandscape={forceLandscape}
+               />
+            ))}
          
          </div>
 
@@ -402,8 +432,8 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({ problem, showValue, 
 
       {/* Value Display */}
       {showValue && (
-        <div className="mt-4 bg-white/90 px-6 py-2 rounded-full shadow-sm text-2xl font-black text-candy-text border border-candy-pink">
-          {currentTotal}
+        <div className="mt-4 bg-white/90 px-6 py-2 rounded-full shadow-sm text-2xl font-black text-candy-text border border-candy-pink min-w-[120px] text-center">
+          {formattedTotal}
         </div>
       )}
     </div>

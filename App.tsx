@@ -6,6 +6,7 @@ import { GameView } from './views/GameView';
 import { RewardsView } from './views/RewardsView';
 import { SettingsView } from './views/SettingsView';
 import { LevelSelectView } from './views/LevelSelectView';
+import { FreeModeView } from './views/FreeModeView';
 import { audioService } from './services/audioService';
 
 const App: React.FC = () => {
@@ -37,10 +38,22 @@ const App: React.FC = () => {
         return <RewardsView changeView={setCurrentView} gameData={gameData} setGameData={setGameData} />;
       case ViewState.SETTINGS:
         return <SettingsView changeView={setCurrentView} gameData={gameData} setGameData={setGameData} />;
+      case ViewState.FREE_MODE:
+        // Free Mode handles its own layout/rotation
+        return <FreeModeView changeView={setCurrentView} />;
       default:
         return <HomeView changeView={setCurrentView} candies={gameData.candies} />;
     }
   };
+
+  // Special handling for Free Mode to bypass the standard container restrictions
+  if (currentView === ViewState.FREE_MODE) {
+    return (
+      <div className="h-full w-full overflow-hidden bg-[#FFF0F5] font-sans text-candy-text select-none">
+         {renderView()}
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full overflow-hidden bg-[#FFF0F5] flex items-center justify-center font-sans text-candy-text select-none">
