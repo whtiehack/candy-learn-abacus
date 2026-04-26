@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ViewState, GameData } from '../types';
-import { STICKERS } from '../constants';
+import { STICKERS, TIMINGS } from '../constants';
 import { Button } from '../components/Button';
 import { saveGameData } from '../services/storageService';
 import { ArrowLeft, Lock, Star, Trophy, Sparkles, Gift } from 'lucide-react';
@@ -67,29 +67,42 @@ export const RewardsView: React.FC<RewardsViewProps> = ({ changeView, gameData, 
       setGameData(updatedData);
       saveGameData(updatedData);
       
-      // Hide confetti after a few seconds
-      setTimeout(() => setShowConfetti(false), 3000);
+      const t = setTimeout(() => setShowConfetti(false), TIMINGS.confetti);
+      return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Generate confetti particles once per show, not on every render
+  const confettiParticles = React.useMemo(() => {
+    if (!showConfetti) return [];
+    const emojis = ['✨', '🎉', '🌟', '💖'];
+    return Array.from({ length: 16 }, (_, i) => ({
+      key: i,
+      emoji: emojis[i % emojis.length],
+      left: `${(i * 13) % 100}%`,
+      delay: `${(i % 6) * 0.3}s`,
+      duration: `${2 + (i % 3) * 0.4}s`,
+    }));
+  }, [showConfetti]);
+
   return (
     <div className="flex flex-col h-full relative">
-      {/* Simple Confetti Effect for New Unlocks */}
+      {/* Confetti — particles are memoized so positions don't reshuffle on parent renders */}
       {showConfetti && (
         <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
-          {[...Array(20)].map((_, i) => (
-            <div 
-              key={i}
+          {confettiParticles.map(p => (
+            <div
+              key={p.key}
               className="absolute text-2xl animate-fall-slow"
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `-10%`,
-                animationDelay: `${Math.random() * 2}s`,
-                animationDuration: `${2 + Math.random()}s`
+                left: p.left,
+                top: '-10%',
+                animationDelay: p.delay,
+                animationDuration: p.duration,
               }}
             >
-              {['✨', '🎉', '🌟', '💖'][Math.floor(Math.random() * 4)]}
+              {p.emoji}
             </div>
           ))}
         </div>

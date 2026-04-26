@@ -18,6 +18,14 @@ export const INITIAL_GAME_DATA: GameData = {
   dailyRecords: [],
 };
 
+// Animation / feedback timings (ms)
+export const TIMINGS = {
+  successCelebration: 1500,
+  failureFeedback: 1000,
+  confetti: 3000,
+  resetConfirmTimeout: 3000,
+} as const;
+
 export const DIFFICULTY_REWARDS: Record<Difficulty, number> = {
   'digit1_upto10': 1,
   'digit1_upto20': 2,

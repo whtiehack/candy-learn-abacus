@@ -4,7 +4,7 @@ import { Button } from '../components/Button';
 import { AbacusVisual } from '../components/AbacusVisual';
 import { generateProblem } from '../services/mathService';
 import { saveGameData, updateDailyRecord, getTodayRecord } from '../services/storageService';
-import { DIFFICULTY_REWARDS } from '../constants';
+import { DIFFICULTY_REWARDS, TIMINGS } from '../constants';
 import { ArrowLeft, XCircle, CheckCircle2 } from 'lucide-react';
 import { audioService } from '../services/audioService';
 
@@ -59,7 +59,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
       setShowCelebration(false);
       setProblem(generateProblem(gameData.settings));
       setCurrentAbacusValue(0);
-    }, 1500);
+    }, TIMINGS.successCelebration);
   };
 
   const handleFailure = () => {
@@ -72,7 +72,7 @@ export const GameView: React.FC<GameViewProps> = ({ changeView, gameData, setGam
       setIsCorrect(null);
       setFeedbackMessage("");
       setShakeError(false);
-    }, 1000);
+    }, TIMINGS.failureFeedback);
   };
 
   const handleChoiceAnswer = (choice: number) => {

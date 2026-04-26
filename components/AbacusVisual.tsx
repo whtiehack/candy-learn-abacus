@@ -326,7 +326,7 @@ const Rod: React.FC<{
   );
 };
 
-export const AbacusVisual: React.FC<AbacusVisualProps> = ({
+const AbacusVisualBase: React.FC<AbacusVisualProps> = ({
   problem,
   showValue,
   onChange,
@@ -482,3 +482,6 @@ export const AbacusVisual: React.FC<AbacusVisualProps> = ({
     </div>
   );
 };
+
+export const AbacusVisual = React.memo(AbacusVisualBase);
+
