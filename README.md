@@ -74,10 +74,17 @@
     npm run dev
     ```
 
-4.  **构建部署**
+4.  **构建**
     ```bash
     npm run build
     ```
+
+5.  **部署到 Cloudflare Pages**
+    需要先 `wrangler login`，然后：
+    ```bash
+    npm run deploy
+    ```
+    项目未与 GitHub 自动绑定，每次发版手动跑此命令。
 
 ## 🎨 设计细节
 
