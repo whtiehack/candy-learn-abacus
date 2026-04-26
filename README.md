@@ -34,7 +34,7 @@
 *   **Styling**: Tailwind CSS (通过 CDN 配置), Custom CSS Animations
 *   **Icons**: Lucide React
 *   **Storage**: Browser LocalStorage (无后端)
-*   **Deployment**: Vercel Ready
+*   **Deployment**: Cloudflare Pages ([abacus.19921130.xyz](https://abacus.19921130.xyz/))
 
 ## 📂 项目结构
 
